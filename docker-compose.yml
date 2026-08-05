@@ -17,9 +17,9 @@ services:
     container_name: earthscan-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: MyStrongRootPassword
       MYSQL_USER: earthscan
-      MYSQL_PASSWORD: earthscan
+      MYSQL_PASSWORD: MyStrongDbPassword
       MYSQL_DATABASE: earthscan_identity
     ports:
       - "3307:3306"
@@ -27,7 +27,7 @@ services:
       - mysql-data:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pMyStrongRootPassword"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -46,8 +46,8 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_identity;User=earthscan;Password=earthscan;"
-      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_identity;User=earthscan;Password=MyStrongDbPassword;"
+      Jwt__Key: "MyNewLongRandomJwtKey_ChangeThis_2026"
       Jwt__Issuer: "EarthScanBackend"
       Jwt__Audience: "EarthScanUsers"
     ports:
@@ -67,8 +67,8 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_land;User=earthscan;Password=earthscan;"
-      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_land;User=earthscan;Password=MyStrongDbPassword;"
+      Jwt__Key: "MyNewLongRandomJwtKey_ChangeThis_2026"
       Jwt__Issuer: "EarthScanBackend"
       Jwt__Audience: "EarthScanUsers"
       ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
@@ -90,8 +90,8 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_agri;User=earthscan;Password=earthscan;"
-      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_agri;User=earthscan;Password=MyStrongDbPassword;"
+      Jwt__Key: "MyNewLongRandomJwtKey_ChangeThis_2026"
       Jwt__Issuer: "EarthScanBackend"
       Jwt__Audience: "EarthScanUsers"
       ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
@@ -114,8 +114,8 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_water;User=earthscan;Password=earthscan;"
-      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_water;User=earthscan;Password=MyStrongDbPassword;"
+      Jwt__Key: "MyNewLongRandomJwtKey_ChangeThis_2026"
       Jwt__Issuer: "EarthScanBackend"
       Jwt__Audience: "EarthScanUsers"
       ApiKeys__DataGov: "${DATAGOV_API_KEY:-}"
@@ -134,8 +134,8 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_community;User=earthscan;Password=earthscan;"
-      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_community;User=earthscan;Password=MyStrongDbPassword;"
+      Jwt__Key: "MyNewLongRandomJwtKey_ChangeThis_2026"
       Jwt__Issuer: "EarthScanBackend"
       Jwt__Audience: "EarthScanUsers"
       ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
@@ -182,7 +182,7 @@ services:
     depends_on:
       - gateway
     ports:
-      - "5173:80"
+      - "80:80"
     networks:
       - earthscan-net
 
