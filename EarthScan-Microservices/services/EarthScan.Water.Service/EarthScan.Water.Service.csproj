@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>EarthScan.Water.Service</AssemblyName>
+    <RootNamespace>EarthScan.Water.Service</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    Exactly the same NuGet packages as the original EarthScan.Backend monolith, so that every
+    linked source file below compiles unmodified.
+  -->
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageReference Include="ExcelDataReader" Version="3.9.0" />
+    <PackageReference Include="ExcelDataReader.DataSet" Version="3.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.28" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="PdfPig" Version="0.1.15" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <!--
+    ============================================================================
+    LINKED SOURCE - NOT COPIED, NOT MODIFIED.
+    These <Compile Include> entries compile the original monolith files straight
+    out of ..\..\EarthScan.Backend. Editing that folder updates every service.
+    ============================================================================
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\EarthScan.Backend\Models\*.cs" LinkBase="Shared\Models" />
+    <Compile Include="..\..\EarthScan.Backend\DTOs\*.cs" LinkBase="Shared\DTOs" />
+    <Compile Include="..\..\EarthScan.Backend\Data\EarthScanDbContext.cs" LinkBase="Shared\Data" />
+    <Compile Include="..\..\EarthScan.Backend\Migrations\*.cs" LinkBase="Shared\Migrations" />
+  </ItemGroup>
+
+  <!-- Only the controllers that belong to this bounded context. -->
+  <ItemGroup>
+    <Compile Include="..\..\EarthScan.Backend\Controllers\GroundwaterController.cs" LinkBase="Shared\Controllers" />
+  </ItemGroup>
+
+  <!-- CGWB dataset read by GroundwaterController.FindExcelPath() -->
+  <ItemGroup>
+    <Content Include="..\..\data\India_Groundwater_Analysis_2024.xlsx" Link="India_Groundwater_Analysis_2024.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

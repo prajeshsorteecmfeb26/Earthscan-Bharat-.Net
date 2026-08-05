@@ -1,0 +1,197 @@
+# =============================================================================
+# EarthScan - full stack: MySQL + 5 microservices + YARP gateway + React UI.
+#
+#   docker compose up --build
+#
+#   Frontend  http://localhost:5173
+#   Gateway   http://localhost:5130   (same address the monolith used)
+#   Swagger   http://localhost:5001..5005/swagger
+# =============================================================================
+
+name: earthscan
+
+services:
+  # ---------------------------------------------------------------- database
+  mysql:
+    image: mysql:8.0
+    container_name: earthscan-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: earthscan
+      MYSQL_PASSWORD: earthscan
+      MYSQL_DATABASE: earthscan_identity
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - earthscan-net
+
+  # ------------------------------------------------------------ microservices
+  identity-service:
+    build:
+      context: .
+      dockerfile: services/EarthScan.Identity.Service/Dockerfile
+    container_name: earthscan-identity
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_identity;User=earthscan;Password=earthscan;"
+      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      Jwt__Issuer: "EarthScanBackend"
+      Jwt__Audience: "EarthScanUsers"
+    ports:
+      - "5001:8080"
+    volumes:
+      - identity-uploads:/app/wwwroot/uploads
+    networks:
+      - earthscan-net
+
+  land-service:
+    build:
+      context: .
+      dockerfile: services/EarthScan.Land.Service/Dockerfile
+    container_name: earthscan-land
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_land;User=earthscan;Password=earthscan;"
+      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      Jwt__Issuer: "EarthScanBackend"
+      Jwt__Audience: "EarthScanUsers"
+      ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
+      Gemini__Model: "${GEMINI_MODEL:-gemini-3.6-flash}"
+    ports:
+      - "5002:8080"
+    volumes:
+      - land-uploads:/app/wwwroot/uploads
+    networks:
+      - earthscan-net
+
+  agri-service:
+    build:
+      context: .
+      dockerfile: services/EarthScan.Agri.Service/Dockerfile
+    container_name: earthscan-agri
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_agri;User=earthscan;Password=earthscan;"
+      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      Jwt__Issuer: "EarthScanBackend"
+      Jwt__Audience: "EarthScanUsers"
+      ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
+      ApiKeys__DataGov: "${DATAGOV_API_KEY:-}"
+      Gemini__Model: "${GEMINI_MODEL:-gemini-3.6-flash}"
+    ports:
+      - "5003:8080"
+    volumes:
+      - agri-uploads:/app/wwwroot/uploads
+    networks:
+      - earthscan-net
+
+  water-service:
+    build:
+      context: .
+      dockerfile: services/EarthScan.Water.Service/Dockerfile
+    container_name: earthscan-water
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_water;User=earthscan;Password=earthscan;"
+      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      Jwt__Issuer: "EarthScanBackend"
+      Jwt__Audience: "EarthScanUsers"
+      ApiKeys__DataGov: "${DATAGOV_API_KEY:-}"
+    ports:
+      - "5004:8080"
+    networks:
+      - earthscan-net
+
+  community-service:
+    build:
+      context: .
+      dockerfile: services/EarthScan.Community.Service/Dockerfile
+    container_name: earthscan-community
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=earthscan_community;User=earthscan;Password=earthscan;"
+      Jwt__Key: "SuperSecretKeyForEarthScanBharatPlatform2026!"
+      Jwt__Issuer: "EarthScanBackend"
+      Jwt__Audience: "EarthScanUsers"
+      ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
+      Gemini__Model: "${GEMINI_MODEL:-gemini-3.6-flash}"
+    ports:
+      - "5005:8080"
+    networks:
+      - earthscan-net
+
+  # ------------------------------------------------------------- api gateway
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/EarthScan.Gateway/Dockerfile
+    container_name: earthscan-gateway
+    restart: unless-stopped
+    depends_on:
+      - identity-service
+      - land-service
+      - agri-service
+      - water-service
+      - community-service
+    environment:
+      ReverseProxy__Clusters__identity__Destinations__primary__Address: "http://identity-service:8080/"
+      ReverseProxy__Clusters__land__Destinations__primary__Address: "http://land-service:8080/"
+      ReverseProxy__Clusters__agri__Destinations__primary__Address: "http://agri-service:8080/"
+      ReverseProxy__Clusters__water__Destinations__primary__Address: "http://water-service:8080/"
+      ReverseProxy__Clusters__community__Destinations__primary__Address: "http://community-service:8080/"
+    ports:
+      # 5130 keeps the frontend's default API_BASE_URL working unchanged.
+      - "5130:8080"
+    networks:
+      - earthscan-net
+
+  # ---------------------------------------------------------------- frontend
+  frontend:
+    build:
+      context: ./EarthScan.Frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: "${VITE_API_URL:-http://localhost:5130}"
+    container_name: earthscan-frontend
+    restart: unless-stopped
+    depends_on:
+      - gateway
+    ports:
+      - "5173:80"
+    networks:
+      - earthscan-net
+
+networks:
+  earthscan-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  identity-uploads:
+  land-uploads:
+  agri-uploads:

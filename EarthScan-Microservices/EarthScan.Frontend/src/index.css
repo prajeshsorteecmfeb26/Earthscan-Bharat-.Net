@@ -1,0 +1,98 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+:root {
+  --font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --bg-color: #0a0f18; /* Very dark blue/black background */
+  --surface-color: rgba(20, 29, 43, 0.7); /* Glassmorphic panel background */
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #ffffff;
+  --text-secondary: #a0aec0;
+  --accent-green: #00e676;
+  --accent-blue: #2979ff;
+  --accent-orange: #ff9800;
+  --glow-shadow: 0 0 20px rgba(0, 230, 118, 0.15);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  display: block;
+  min-width: 100vw;
+  min-height: 100vh;
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphism utilities */
+.glass-panel {
+  background: var(--surface-color);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #00e676, #2979ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom Scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Global Placeholder Styling for better visibility in dark mode */
+::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+  opacity: 1 !important; /* Override Firefox's default opacity */
+}
+::-webkit-input-placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+:-ms-input-placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Custom Export Button to prevent whiteout bug */
+.btn-export-custom {
+  background-color: transparent !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-export-custom:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+.btn-export-custom:focus, .btn-export-custom:active, .btn-export-custom.active {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.2) !important;
+}
