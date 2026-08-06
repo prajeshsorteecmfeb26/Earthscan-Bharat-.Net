@@ -166,7 +166,7 @@ export default function Login() {
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="enter your email"
+                                        placeholder="Enter your email"
                                         style={{ borderColor: 'rgba(255,255,255,0.2)' }}
                                     />
                                 </Form.Group>
@@ -179,7 +179,7 @@ export default function Login() {
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="enter your password"
+                                        placeholder="Enter your password"
                                         style={{ borderColor: 'rgba(255,255,255,0.2)' }}
                                     />
                                     <div className="d-flex justify-content-end mt-1">

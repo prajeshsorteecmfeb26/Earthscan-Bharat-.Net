@@ -215,7 +215,7 @@ export default function Register() {
                                         required
                                         isInvalid={!!errors.phone}
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="e.g. +91 9876543210"
+                                        placeholder="e.g. 9876543210"
                                     />
                                     <Form.Control.Feedback type="invalid">
                                         {errors.phone}
