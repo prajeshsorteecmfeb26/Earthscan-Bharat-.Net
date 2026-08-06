@@ -47,6 +47,23 @@ namespace EarthScan.Backend.Controllers
                 return NotFound(new { message = "User not found" });
             }
 
+            // Clean up forum posts and comments authored by this deleted user
+            var userPosts = await _context.ForumPosts
+                .Where(p => p.AuthorName == user.Name || p.AuthorName == user.Email)
+                .ToListAsync();
+            if (userPosts.Any())
+            {
+                _context.ForumPosts.RemoveRange(userPosts);
+            }
+
+            var userComments = await _context.ForumComments
+                .Where(c => c.AuthorName == user.Name || c.AuthorName == user.Email)
+                .ToListAsync();
+            if (userComments.Any())
+            {
+                _context.ForumComments.RemoveRange(userComments);
+            }
+
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
 

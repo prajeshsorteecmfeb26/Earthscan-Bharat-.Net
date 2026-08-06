@@ -23,7 +23,16 @@ namespace EarthScan.Backend.Controllers
         [HttpGet("posts")]
         public async Task<IActionResult> GetPosts()
         {
+            // Retrieve list of active user names and emails
+            var activeUserNames = await _context.Users
+                .Select(u => u.Name)
+                .Union(_context.Users.Select(u => u.Email))
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Distinct()
+                .ToListAsync();
+
             var posts = await _context.ForumPosts
+                .Where(p => activeUserNames.Contains(p.AuthorName))
                 .Include(p => p.Comments)
                 .OrderByDescending(p => p.CreatedAt)
                 .Select(p => new
@@ -35,14 +44,17 @@ namespace EarthScan.Backend.Controllers
                     p.AuthorRole,
                     p.Category,
                     p.CreatedAt,
-                    Comments = p.Comments.OrderBy(c => c.CreatedAt).Select(c => new
-                    {
-                        c.Id,
-                        c.Content,
-                        c.AuthorName,
-                        c.AuthorRole,
-                        c.CreatedAt
-                    })
+                    Comments = p.Comments
+                        .Where(c => activeUserNames.Contains(c.AuthorName))
+                        .OrderBy(c => c.CreatedAt)
+                        .Select(c => new
+                        {
+                            c.Id,
+                            c.Content,
+                            c.AuthorName,
+                            c.AuthorRole,
+                            c.CreatedAt
+                        })
                 })
                 .ToListAsync();
 

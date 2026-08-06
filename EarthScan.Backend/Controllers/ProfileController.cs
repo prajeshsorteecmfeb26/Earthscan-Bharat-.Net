@@ -111,7 +111,7 @@ namespace EarthScan.Backend.Controllers
 
         // POST: api/profile/upload-photo
         [HttpPost("upload-photo")]
-        public async Task<IActionResult> UploadPhoto([FromForm] IFormFile photo, [FromForm] int userId)
+        public async Task<IActionResult> UploadPhoto(IFormFile photo, [FromForm] int userId)
         {
             if (photo == null || photo.Length == 0)
             {

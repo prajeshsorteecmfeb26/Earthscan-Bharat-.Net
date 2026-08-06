@@ -19,14 +19,16 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    const userRole = user.role || user.Role;
+    const userRole = (user.role || user.Role || '').trim();
+    const hasRole = allowedRoles && allowedRoles.some(r => r.toLowerCase() === userRole.toLowerCase());
 
-    if (allowedRoles && !allowedRoles.includes(userRole)) {
+    if (allowedRoles && !hasRole) {
         // Redirect unauthorized users to their specific dashboard
         let defaultRoute = '/';
-        if (userRole === 'Admin') defaultRoute = '/admin';
-        else if (userRole === 'Land Buyer') defaultRoute = '/search';
-        else if (userRole === 'Agriculture Expert') defaultRoute = '/expert/queries';
+        const roleLower = userRole.toLowerCase();
+        if (roleLower === 'admin') defaultRoute = '/admin';
+        else if (roleLower === 'land buyer') defaultRoute = '/search';
+        else if (roleLower === 'agriculture expert') defaultRoute = '/expert/queries';
         
         return <Navigate to={defaultRoute} replace />;
     }
