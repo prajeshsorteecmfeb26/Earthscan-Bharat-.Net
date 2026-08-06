@@ -125,8 +125,9 @@ export default function Register() {
             newErrors.password = 'Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.';
         }
 
-        if (phone && !/^\+?[0-9\s\-]{10,15}$/.test(phone)) {
-            newErrors.phone = 'Please enter a valid phone number.';
+        const cleanPhone = (phone || '').toString().replace(/^(\+91|0|\s)/g, '').replace(/[\s\-]/g, '');
+        if (phone && !/^[6-9]\d{9}$/.test(cleanPhone)) {
+            newErrors.phone = 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.';
         }
 
         if (pincode && pincode.length !== 6) {
