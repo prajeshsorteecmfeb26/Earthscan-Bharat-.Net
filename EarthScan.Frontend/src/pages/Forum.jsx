@@ -251,58 +251,58 @@ export default function Forum() {
             </Row>
 
             {/* Create Post Modal */}
-            <Modal show={showPostModal} onHide={() => setShowPostModal(false)} centered size="lg" contentClassName="glass-panel text-white border-0">
-                <Modal.Header closeButton closeVariant="white" className="border-secondary">
-                    <Modal.Title><i className="bi bi-pencil-square text-success"></i> Create a New Post</Modal.Title>
+            <Modal show={showPostModal} onHide={() => setShowPostModal(false)} centered size="lg">
+                <Modal.Header closeButton closeVariant="white" className="border-secondary px-4 py-3">
+                    <Modal.Title className="fw-bold fs-5"><i className="bi bi-pencil-square text-success me-2"></i> Create a New Post</Modal.Title>
                 </Modal.Header>
-                <Modal.Body>
+                <Modal.Body className="p-4">
                     <Form>
-                        <Row>
+                        <Row className="g-3 mb-3">
                             <Col md={8}>
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="text-secondary small">Post Title</Form.Label>
+                                <Form.Group>
+                                    <Form.Label className="text-secondary small fw-bold mb-2">Post Title</Form.Label>
                                     <Form.Control 
                                         type="text" 
                                         placeholder="What's on your mind?"
                                         value={newPost.title}
                                         onChange={(e) => setNewPost({...newPost, title: e.target.value})}
-                                        className="bg-transparent text-white border-secondary shadow-none" 
+                                        className="bg-dark text-white border-secondary shadow-none py-2 px-3" 
                                     />
                                 </Form.Group>
                             </Col>
                             <Col md={4}>
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="text-secondary small">Category</Form.Label>
+                                <Form.Group>
+                                    <Form.Label className="text-secondary small fw-bold mb-2">Category</Form.Label>
                                     <Form.Select 
                                         value={newPost.category}
                                         onChange={(e) => setNewPost({...newPost, category: e.target.value})}
-                                        className="bg-transparent text-white border-secondary shadow-none"
+                                        className="bg-dark text-white border-secondary shadow-none py-2 px-3"
                                     >
-                                        <option value="General" className="bg-dark">General</option>
-                                        <option value="Crop Advice" className="bg-dark">Crop Advice</option>
-                                        <option value="Market Prices" className="bg-dark">Market Prices</option>
-                                        <option value="Equipment" className="bg-dark">Equipment</option>
-                                        <option value="Water & Irrigation" className="bg-dark">Water & Irrigation</option>
+                                        <option value="General" className="bg-dark text-white">General</option>
+                                        <option value="Crop Advice" className="bg-dark text-white">Crop Advice</option>
+                                        <option value="Market Prices" className="bg-dark text-white">Market Prices</option>
+                                        <option value="Equipment" className="bg-dark text-white">Equipment</option>
+                                        <option value="Water & Irrigation" className="bg-dark text-white">Water & Irrigation</option>
                                     </Form.Select>
                                 </Form.Group>
                             </Col>
                         </Row>
-                        <Form.Group className="mb-3">
-                            <Form.Label className="text-secondary small">Content</Form.Label>
+                        <Form.Group className="mb-2">
+                            <Form.Label className="text-secondary small fw-bold mb-2">Content</Form.Label>
                             <Form.Control 
                                 as="textarea" 
-                                rows={6} 
+                                rows={5} 
                                 placeholder="Describe your question or share your experience..."
                                 value={newPost.content}
                                 onChange={(e) => setNewPost({...newPost, content: e.target.value})}
-                                className="bg-transparent text-white border-secondary shadow-none" 
+                                className="bg-dark text-white border-secondary shadow-none p-3" 
                             />
                         </Form.Group>
                     </Form>
                 </Modal.Body>
-                <Modal.Footer className="border-secondary">
-                    <Button variant="outline-secondary" onClick={() => setShowPostModal(false)}>Cancel</Button>
-                    <Button variant="success" onClick={handleCreatePost} disabled={submittingPost || !newPost.title || !newPost.content}>
+                <Modal.Footer className="border-secondary px-4 py-3">
+                    <Button variant="outline-secondary" className="px-4 rounded-pill" onClick={() => setShowPostModal(false)}>Cancel</Button>
+                    <Button variant="success" className="px-4 rounded-pill fw-bold" onClick={handleCreatePost} disabled={submittingPost || !newPost.title || !newPost.content}>
                         {submittingPost ? 'Posting...' : 'Publish Post'}
                     </Button>
                 </Modal.Footer>

@@ -58,6 +58,38 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<EarthScanDbContext>();
         context.Database.Migrate();
+
+        // Ensure missing Land table columns (ContactNumber, ImagePath, CreatedAt) exist in MySQL schema without throwing console errors
+        try
+        {
+            var existingColumnsSql = @"
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Lands';";
+            
+            var existingColumns = context.Database
+                .SqlQueryRaw<string>(existingColumnsSql)
+                .ToList();
+
+            var columnsSet = new HashSet<string>(existingColumns, StringComparer.OrdinalIgnoreCase);
+
+            if (!columnsSet.Contains("ContactNumber"))
+            {
+                context.Database.ExecuteSqlRaw(@"ALTER TABLE `Lands` ADD COLUMN `ContactNumber` LONGTEXT NULL;");
+            }
+            if (!columnsSet.Contains("ImagePath"))
+            {
+                context.Database.ExecuteSqlRaw(@"ALTER TABLE `Lands` ADD COLUMN `ImagePath` LONGTEXT NULL;");
+            }
+            if (!columnsSet.Contains("CreatedAt"))
+            {
+                context.Database.ExecuteSqlRaw(@"ALTER TABLE `Lands` ADD COLUMN `CreatedAt` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6);");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Schema check notice: " + ex.Message);
+        }
         
         if (!context.Users.Any())
         {
@@ -236,6 +268,7 @@ using (var scope = app.Services.CreateScope())
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
     app.UseSwagger();
     app.UseSwaggerUI();
 }

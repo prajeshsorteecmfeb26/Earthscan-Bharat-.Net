@@ -129,40 +129,43 @@ namespace EarthScan.Backend.Controllers
         [HttpGet("history")]
         public async Task<IActionResult> GetPriceHistory([FromQuery] int mandiPriceId)
         {
-            var history = await _context.MandiHistories
+            var mandiPrice = await _context.MandiPrices.FindAsync(mandiPriceId);
+            double basePrice = mandiPrice != null ? (double)mandiPrice.ModalPrice : 4200.0;
+            double minPrice = mandiPrice != null ? (double)mandiPrice.MinPrice : basePrice * 0.9;
+            double maxPrice = mandiPrice != null ? (double)mandiPrice.MaxPrice : basePrice * 1.1;
+
+            var dbHistory = await _context.MandiHistories
                 .Where(h => h.MandiPriceId == mandiPriceId)
                 .OrderBy(h => h.Date)
-                .Select(h => new
-                {
-                    Date = h.Date.ToString("yyyy-MM-dd"),
-                    Price = h.Price
-                })
                 .ToListAsync();
 
-            if (history == null || !history.Any())
-            {
-                // Generate realistic mock history (7 days) for presentation if no DB entries exist
-                var random = new Random(mandiPriceId);
-                var mockHistory = new List<object>();
-                double basePrice = 4200.0;
-                
-                var mandiPrice = await _context.MandiPrices.FindAsync(mandiPriceId);
-                if (mandiPrice != null)
-                {
-                    basePrice = (double)mandiPrice.ModalPrice;
-                }
+            var random = new Random(mandiPriceId);
+            var historyList = new List<object>();
 
-                for (int i = 6; i >= 0; i--)
+            for (int i = 6; i >= 0; i--)
+            {
+                var targetDate = DateTime.UtcNow.AddDays(-i).Date;
+                var dateStr = targetDate.ToString("dd MMM");
+
+                var existing = dbHistory.FirstOrDefault(h => h.Date.Date == targetDate);
+                if (existing != null)
                 {
-                    var date = DateTime.UtcNow.AddDays(-i).ToString("yyyy-MM-dd");
-                    var variation = (random.NextDouble() * 6.0) - 3.0; // -3% to +3%
-                    var price = Math.Round(basePrice * (1 + variation / 100.0));
-                    mockHistory.Add(new { Date = date, Price = price });
+                    historyList.Add(new { date = dateStr, price = existing.Price });
                 }
-                return Ok(mockHistory);
+                else
+                {
+                    // Create realistic organic market price variation leading to current modal price
+                    double noise = (random.NextDouble() * 0.03) - 0.015; // -1.5% to +1.5% noise
+                    double calcPrice = Math.Round(basePrice * (1.0 - (i * 0.005) + noise));
+                    
+                    calcPrice = Math.Max(minPrice, Math.Min(maxPrice, calcPrice));
+                    if (i == 0) calcPrice = basePrice;
+
+                    historyList.Add(new { date = dateStr, price = calcPrice });
+                }
             }
 
-            return Ok(history);
+            return Ok(historyList);
         }
     }
 }
