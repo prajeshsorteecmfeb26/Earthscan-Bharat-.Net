@@ -183,7 +183,7 @@ export default function Register() {
                                         required
                                         isInvalid={!!errors.name}
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="e.g. Arjun Singh"
+                                        placeholder="Full Name"
                                     />
                                     <Form.Control.Feedback type="invalid">
                                         {errors.name}
@@ -191,7 +191,7 @@ export default function Register() {
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
-                                    <Form.Label className="text-secondary small">Email Address</Form.Label>
+                                    <Form.Label className="text-secondary small">Email</Form.Label>
                                     <Form.Control
                                         type="email"
                                         value={email}
@@ -273,7 +273,7 @@ export default function Register() {
                                         required
                                         isInvalid={!!errors.password}
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="Minimum 6 characters"
+                                        placeholder="Password"
                                     />
                                     <Form.Control.Feedback type="invalid">
                                         {errors.password}

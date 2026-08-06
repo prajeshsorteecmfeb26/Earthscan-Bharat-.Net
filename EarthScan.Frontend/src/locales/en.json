@@ -23,7 +23,7 @@
   "login": {
     "welcome": "Welcome Back",
     "sign_in": "Sign in to EarthScan Bharat",
-    "email": "Email Address",
+    "email": "Email",
     "password": "Password",
     "login_btn": "Log In",
     "forgot_pass": "Forgot Password?",
