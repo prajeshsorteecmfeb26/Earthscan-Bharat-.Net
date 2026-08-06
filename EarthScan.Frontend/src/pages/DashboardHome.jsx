@@ -334,7 +334,7 @@ export default function DashboardHome() {
     const { user, updateUser } = React.useContext(AuthContext);
     const { t } = useTranslation();
 
-    // Initial load: fetch weather and groundwater
+    // Initial load: fetch location, weather and groundwater
     useEffect(() => {
         setSoilType(t('dashboard.soil_type') === 'Soil Type' ? 'Black Soil' : t('dashboard.soil_type'));
         
@@ -343,31 +343,60 @@ export default function DashboardHome() {
         let initialPin = '411001';
         let initialLocName = 'Pune, Maharashtra';
         let stateVal = 'Maharashtra';
+        let hasCustomCoords = false;
 
         if (user) {
-            if (user.latitude && user.longitude) {
-                initialLat = parseFloat(user.latitude);
-                initialLng = parseFloat(user.longitude);
+            const userLat = parseFloat(user.latitude || user.Lat);
+            const userLng = parseFloat(user.longitude || user.Lon);
+            if (!isNaN(userLat) && !isNaN(userLng) && userLat !== 0 && userLng !== 0) {
+                initialLat = userLat;
+                initialLng = userLng;
+                hasCustomCoords = true;
             }
             if (user.pincode) {
                 initialPin = user.pincode;
             }
             if (user.location || user.village) {
-                initialLocName = user.location || `${user.village}, ${user.district || ''}, ${user.stateName || ''}`;
+                const parts = [user.village || user.location, user.district, user.stateName || 'Maharashtra'].filter(Boolean);
+                initialLocName = parts.join(', ');
             } else if (user.district && user.stateName) {
                 initialLocName = `${user.district}, ${user.stateName}`;
+            } else if (user.pincode) {
+                initialLocName = `${user.pincode}, Maharashtra`;
             }
             if (user.stateName) {
                 stateVal = user.stateName;
             }
         }
         
-        setCoords({ lat: initialLat, lng: initialLng });
         setPinCode(initialPin);
         setLocationName(initialLocName);
-        
-        loadWeather(initialLat, initialLng);
-        loadGroundwater(stateVal).finally(() => setLoading(false));
+
+        const initFarmerLocation = async () => {
+            let lat = initialLat;
+            let lng = initialLng;
+
+            // Geocode farmer city location if custom lat/lng is not set
+            if (!hasCustomCoords && initialLocName) {
+                const geo = await geocodeCity(initialLocName);
+                if (geo) {
+                    lat = geo.lat;
+                    lng = geo.lon;
+                } else if (initialPin && /^\d{6}$/.test(initialPin)) {
+                    const pinGeo = await geocodeCity(`${initialPin}, India`);
+                    if (pinGeo) {
+                        lat = pinGeo.lat;
+                        lng = pinGeo.lon;
+                    }
+                }
+            }
+
+            setCoords({ lat, lng });
+            loadWeather(lat, lng);
+            loadGroundwater(stateVal).finally(() => setLoading(false));
+        };
+
+        initFarmerLocation();
     }, [user]);
 
     async function loadWeather(lat, lng) {

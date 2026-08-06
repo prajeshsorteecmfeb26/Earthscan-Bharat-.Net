@@ -387,10 +387,30 @@ namespace EarthScan.Backend.Controllers
             }
 
             int ownerId = request.OwnerId;
-            if (ownerId <= 0)
+            var existingOwner = ownerId > 0 ? await _context.Users.FirstOrDefaultAsync(u => u.Id == ownerId) : null;
+            if (existingOwner == null)
             {
                 var defaultOwner = await _context.Users.FirstOrDefaultAsync();
-                ownerId = defaultOwner != null ? defaultOwner.Id : 1;
+                if (defaultOwner != null)
+                {
+                    ownerId = defaultOwner.Id;
+                }
+                else
+                {
+                    var newOwner = new User
+                    {
+                        Name = "EarthScan Land Owner",
+                        Email = "owner@earthscan.in",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Owner@123"),
+                        Role = "Land Buyer",
+                        Phone = "9876543210",
+                        Village = "Jalna",
+                        Pincode = "431203"
+                    };
+                    _context.Users.Add(newOwner);
+                    await _context.SaveChangesAsync();
+                    ownerId = newOwner.Id;
+                }
             }
 
             string title = string.IsNullOrWhiteSpace(request.Title) ? "Verified Agricultural Land" : request.Title.Trim();
