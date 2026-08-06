@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Container, Row, Col, Card, Button, Form, Badge, Modal, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '../config';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Forum() {
+    const { user: authUser } = useContext(AuthContext);
+    const user = authUser || JSON.parse(localStorage.getItem('user') || '{}');
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState('');
