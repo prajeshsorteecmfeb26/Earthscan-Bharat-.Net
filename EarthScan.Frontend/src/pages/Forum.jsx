@@ -63,6 +63,22 @@ export default function Forum() {
         }
     };
 
+    const handleDeletePost = async (postId) => {
+        if (!window.confirm("Are you sure you want to delete this post?")) return;
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(`${API_BASE_URL}/api/forum/posts/${postId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            setPosts(posts.filter(p => p.id !== postId));
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            alert('Failed to delete post');
+        }
+    };
+
     const handleAddComment = async (postId) => {
         if (!commentContent.trim()) return;
         setSubmittingComment(true);
@@ -173,7 +189,20 @@ export default function Forum() {
                                                 </small>
                                             </div>
                                         </div>
-                                        <Badge bg={getCategoryBadgeColor(post.category)}>{post.category}</Badge>
+                                        <div className="d-flex align-items-center gap-2">
+                                            <Badge bg={getCategoryBadgeColor(post.category)}>{post.category}</Badge>
+                                            {(user?.role === 'Admin' || user?.role === 'admin' || user?.name === post.authorName) && (
+                                                <Button 
+                                                    variant="outline-danger" 
+                                                    size="sm" 
+                                                    className="border-0 p-1 lh-1 rounded-circle ms-1"
+                                                    title="Delete Post"
+                                                    onClick={() => handleDeletePost(post.id)}
+                                                >
+                                                    <i className="bi bi-trash-fill text-danger fs-6"></i>
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                     
                                     <h5 className="fw-bold mb-2">{post.title}</h5>
