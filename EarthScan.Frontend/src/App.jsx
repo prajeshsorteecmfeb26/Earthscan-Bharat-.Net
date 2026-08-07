@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText, Button, Avatar } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -9,6 +9,8 @@ import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import ForumIcon from '@mui/icons-material/Forum';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ChatIcon from '@mui/icons-material/Chat';
+import GroupIcon from '@mui/icons-material/Group';
 
 import DashboardHome from './pages/DashboardHome';
 import LandSearch from './pages/LandSearch';
@@ -33,7 +35,7 @@ import Forum from './pages/Forum';
 import MyQueries from './pages/MyQueries';
 import LanguageSelector from './components/LanguageSelector';
 import Profile from './pages/Profile';
-import KrishiMitraChat from './components/KrishiMitraChat';
+import AdminSupportQueries from './pages/AdminSupportQueries';
 
 const drawerWidth = 260;
 
@@ -66,48 +68,44 @@ function MainLayout({ children }) {
   let drawerItems = [];
 
   if (user) {
-    const role = user.role || user.Role;
-    switch (role) {
-      case 'Farmer':
-        drawerItems = [
-          { text: t('sidebar.land_scanner'), icon: <DashboardIcon />, path: '/' },
-          { text: t('sidebar.borewell_planner'), icon: <WaterDropIcon />, path: '/water' },
-          { text: t('sidebar.crop_fertilizer'), icon: <LandscapeIcon />, path: '/crop' },
-          { text: t('sidebar.mandi_schemes'), icon: <AssessmentIcon />, path: '/mandi' },
-          { text: t('sidebar.forum'), icon: <ForumIcon />, path: '/forum' },
-          { text: 'My Queries', icon: <ForumIcon />, path: '/my-queries' }
-        ];
-        break;
-      case 'Land Buyer':
-        drawerItems = [
-          { text: t('sidebar.land_search'), icon: <DashboardIcon />, path: '/search' },
-          { text: t('sidebar.compare_land'), icon: <LandscapeIcon />, path: '/buyer/compare' },
-          { text: t('sidebar.investment_analysis'), icon: <AssessmentIcon />, path: '/buyer/analysis' },
-          { text: t('sidebar.saved_searches'), icon: <ForumIcon />, path: '/saved' },
-          { text: t('sidebar.forum'), icon: <ForumIcon />, path: '/forum' },
-          { text: 'My Queries', icon: <ForumIcon />, path: '/my-queries' }
-        ];
-        break;
-      case 'Agriculture Expert':
-        drawerItems = [
-          { text: t('sidebar.answer_queries'), icon: <ForumIcon />, path: '/expert/queries' },
-          { text: t('sidebar.manage_crop'), icon: <LandscapeIcon />, path: '/expert/manage-crop' },
-          { text: t('sidebar.mandi_schemes'), icon: <AssessmentIcon />, path: '/mandi' },
-          { text: t('sidebar.forum'), icon: <ForumIcon />, path: '/forum' }
-        ];
-        break;
-      case 'Admin':
-        drawerItems = [
-          { text: 'Admin Dashboard', icon: <DashboardIcon />, path: '/admin' },
-          { text: t('sidebar.manage_users'), icon: <ForumIcon />, path: '/admin/users' },
-          { text: t('sidebar.analytics_reports'), icon: <AssessmentIcon />, path: '/admin/analytics' },
-          { text: t('sidebar.forum'), icon: <ForumIcon />, path: '/forum' }
-        ];
-        break;
-      default:
-        drawerItems = [
-          { text: t('sidebar.dashboard'), icon: <DashboardIcon />, path: '/' }
-        ];
+    const roleRaw = (user.role || user.Role || '').trim().toLowerCase();
+    if (roleRaw === 'farmer') {
+      drawerItems = [
+        { text: t('sidebar.land_scanner'), icon: <DashboardIcon />, path: '/' },
+        { text: t('sidebar.borewell_planner'), icon: <WaterDropIcon />, path: '/water' },
+        { text: t('sidebar.crop_fertilizer'), icon: <LandscapeIcon />, path: '/crop' },
+        { text: t('sidebar.mandi_schemes'), icon: <AssessmentIcon />, path: '/mandi' },
+        { text: t('sidebar.forum'), icon: <ForumIcon />, path: '/forum' },
+        { text: 'My Queries', icon: <ForumIcon />, path: '/my-queries' }
+      ];
+    } else if (roleRaw === 'land buyer') {
+      drawerItems = [
+        { text: t('sidebar.land_search'), icon: <DashboardIcon />, path: '/search' },
+        { text: t('sidebar.compare_land'), icon: <LandscapeIcon />, path: '/buyer/compare' },
+        { text: t('sidebar.investment_analysis'), icon: <AssessmentIcon />, path: '/buyer/analysis' },
+        { text: t('sidebar.saved_searches'), icon: <ForumIcon />, path: '/saved' },
+        { text: t('sidebar.forum'), icon: <ForumIcon />, path: '/forum' },
+        { text: 'My Queries', icon: <ForumIcon />, path: '/my-queries' }
+      ];
+    } else if (roleRaw === 'agriculture expert') {
+      drawerItems = [
+        { text: t('sidebar.manage_crop'), icon: <LandscapeIcon />, path: '/expert/manage-crop' },
+        { text: t('sidebar.mandi_schemes'), icon: <AssessmentIcon />, path: '/mandi' },
+        { text: t('sidebar.forum'), icon: <ForumIcon />, path: '/forum' },
+        { text: 'My Queries', icon: <ForumIcon />, path: '/my-queries' }
+      ];
+    } else if (roleRaw === 'admin') {
+      drawerItems = [
+        { text: 'Admin Dashboard', icon: <DashboardIcon />, path: '/admin' },
+        { text: t('sidebar.manage_users'), icon: <GroupIcon />, path: '/admin/users' },
+        { text: 'Support Queries', icon: <ChatIcon />, path: '/admin/queries' },
+        { text: t('sidebar.analytics_reports'), icon: <AssessmentIcon />, path: '/admin/analytics' },
+        { text: t('sidebar.forum'), icon: <ForumIcon />, path: '/forum' }
+      ];
+    } else {
+      drawerItems = [
+        { text: t('sidebar.dashboard'), icon: <DashboardIcon />, path: '/' }
+      ];
     }
   }
 
@@ -341,7 +339,7 @@ function App() {
         </ProtectedRoute>
       } />
       <Route path="/my-queries" element={
-        <ProtectedRoute allowedRoles={['Farmer', 'Land Buyer']}>
+        <ProtectedRoute allowedRoles={['Farmer', 'Land Buyer', 'Agriculture Expert']}>
           <MainLayout>
             <MyQueries />
           </MainLayout>
@@ -349,13 +347,7 @@ function App() {
       } />
 
       {/* Agriculture Expert Routes */}
-      <Route path="/expert/queries" element={
-        <ProtectedRoute allowedRoles={['Agriculture Expert']}>
-          <MainLayout>
-            <AnswerQueries />
-          </MainLayout>
-        </ProtectedRoute>
-      } />
+      <Route path="/expert/queries" element={<Navigate to="/expert/manage-crop" replace />} />
       <Route path="/expert/manage-crop" element={
         <ProtectedRoute allowedRoles={['Agriculture Expert']}>
           <MainLayout>
@@ -379,6 +371,13 @@ function App() {
           </MainLayout>
         </ProtectedRoute>
       } />
+      <Route path="/admin/queries" element={
+        <ProtectedRoute allowedRoles={['Admin']}>
+          <MainLayout>
+            <AdminSupportQueries />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
       <Route path="/admin/analytics" element={
         <ProtectedRoute allowedRoles={['Admin']}>
           <MainLayout>
@@ -396,7 +395,6 @@ function App() {
         </ProtectedRoute>
       } />
     </Routes>
-    <KrishiMitraChat />
     </>
   );
 }

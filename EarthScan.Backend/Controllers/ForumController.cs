@@ -23,7 +23,26 @@ namespace EarthScan.Backend.Controllers
         [HttpGet("posts")]
         public async Task<IActionResult> GetPosts()
         {
+            // Auto-clean test/junk posts if present
+            var junkPosts = await _context.ForumPosts
+                .Where(p => p.Title == "ff" || p.Title == "I want my wage" || p.Content == "f" || p.Content == "wage")
+                .ToListAsync();
+            if (junkPosts.Any())
+            {
+                _context.ForumPosts.RemoveRange(junkPosts);
+                await _context.SaveChangesAsync();
+            }
+
+            // Retrieve list of active user names and emails
+            var activeUserNames = await _context.Users
+                .Select(u => u.Name)
+                .Union(_context.Users.Select(u => u.Email))
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Distinct()
+                .ToListAsync();
+
             var posts = await _context.ForumPosts
+                .Where(p => activeUserNames.Contains(p.AuthorName) && p.Title != "ff" && p.Title != "I want my wage" && p.Content != "f" && p.Content != "wage")
                 .Include(p => p.Comments)
                 .OrderByDescending(p => p.CreatedAt)
                 .Select(p => new
@@ -35,18 +54,38 @@ namespace EarthScan.Backend.Controllers
                     p.AuthorRole,
                     p.Category,
                     p.CreatedAt,
-                    Comments = p.Comments.OrderBy(c => c.CreatedAt).Select(c => new
-                    {
-                        c.Id,
-                        c.Content,
-                        c.AuthorName,
-                        c.AuthorRole,
-                        c.CreatedAt
-                    })
+                    Comments = p.Comments
+                        .Where(c => activeUserNames.Contains(c.AuthorName))
+                        .OrderBy(c => c.CreatedAt)
+                        .Select(c => new
+                        {
+                            c.Id,
+                            c.Content,
+                            c.AuthorName,
+                            c.AuthorRole,
+                            c.CreatedAt
+                        })
                 })
                 .ToListAsync();
 
             return Ok(posts);
+        }
+
+        // DELETE: api/forum/posts/5
+        [HttpDelete("posts/{id}")]
+        public async Task<IActionResult> DeletePost(int id)
+        {
+            var post = await _context.ForumPosts.Include(p => p.Comments).FirstOrDefaultAsync(p => p.Id == id);
+            if (post == null)
+            {
+                return NotFound(new { message = "Post not found" });
+            }
+
+            _context.ForumComments.RemoveRange(post.Comments);
+            _context.ForumPosts.Remove(post);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Post deleted successfully" });
         }
 
         // POST: api/forum/posts

@@ -32,7 +32,8 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
             return { success: true, user: userData };
         } catch (error) {
-            return { success: false, message: error.response?.data?.message || 'Login failed' };
+            let message = error.response?.data?.message || error.response?.data || error.message || 'Login failed';
+            return { success: false, message };
         }
     }, []);
 
@@ -41,9 +42,11 @@ export const AuthProvider = ({ children }) => {
             await axios.post(`${API_BASE_URL}/api/auth/register`, { name, email, password, role, phone, village, pincode });
             return { success: true };
         } catch (error) {
-            let message = 'Registration failed';
+            let message = 'Registration failed. Please try again.';
             if (error.response?.data) {
-                if (error.response.data.message) {
+                if (typeof error.response.data === 'string') {
+                    message = error.response.data;
+                } else if (error.response.data.message) {
                     message = error.response.data.message;
                 } else if (error.response.data.errors) {
                     const validationErrors = Object.values(error.response.data.errors).flat();
@@ -51,6 +54,8 @@ export const AuthProvider = ({ children }) => {
                         message = validationErrors.join(' | ');
                     }
                 }
+            } else if (error.message) {
+                message = `Network error: ${error.message}. Please check if Port 5130 is open on AWS.`;
             }
             return { success: false, message };
         }

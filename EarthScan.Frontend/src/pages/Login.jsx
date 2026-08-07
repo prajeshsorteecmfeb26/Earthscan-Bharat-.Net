@@ -20,7 +20,7 @@ export default function Login() {
             const userRole = user.role || user.Role;
             if (userRole === 'Admin') navigate('/admin');
             else if (userRole === 'Land Buyer') navigate('/search');
-            else if (userRole === 'Agriculture Expert') navigate('/expert/queries');
+            else if (userRole === 'Agriculture Expert') navigate('/expert/manage-crop');
             else navigate('/');
         }
     }, [user, navigate]);
@@ -129,7 +129,7 @@ export default function Login() {
             const userRole = result.user?.role || result.user?.Role;
             if (userRole === 'Admin') navigate('/admin');
             else if (userRole === 'Land Buyer') navigate('/search');
-            else if (userRole === 'Agriculture Expert') navigate('/expert/queries');
+            else if (userRole === 'Agriculture Expert') navigate('/expert/manage-crop');
             else navigate('/');
         } else {
             setError(result.message);
@@ -166,7 +166,7 @@ export default function Login() {
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="enter your email"
+                                        placeholder="Email"
                                         style={{ borderColor: 'rgba(255,255,255,0.2)' }}
                                     />
                                 </Form.Group>
@@ -179,7 +179,7 @@ export default function Login() {
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="enter your password"
+                                        placeholder="Password"
                                         style={{ borderColor: 'rgba(255,255,255,0.2)' }}
                                     />
                                     <div className="d-flex justify-content-end mt-1">

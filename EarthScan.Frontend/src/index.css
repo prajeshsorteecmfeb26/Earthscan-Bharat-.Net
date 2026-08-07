@@ -96,3 +96,36 @@ body {
   border-color: #ffffff !important;
   box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.2) !important;
 }
+
+/* Modal z-index and viewport positioning to never overlap sidebar */
+.modal-backdrop {
+  z-index: 1300 !important;
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.modal {
+  z-index: 1350 !important;
+}
+
+@media (min-width: 992px) {
+  .modal-dialog {
+    margin-left: calc(260px + (100vw - 260px - 800px) / 2) !important;
+    margin-right: auto !important;
+  }
+}
+
+.modal-content {
+  background-color: #121927 !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85) !important;
+  border-radius: 16px !important;
+  color: #ffffff !important;
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.modal-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}

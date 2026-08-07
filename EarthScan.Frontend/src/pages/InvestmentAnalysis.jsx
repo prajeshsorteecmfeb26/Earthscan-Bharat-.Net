@@ -6,26 +6,6 @@ import { CircularProgress } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { SavedSearchContext } from '../context/SavedSearchContext';
 import { useLocation } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Recenter helper component for Leaflet
-function MapRecenter({ lat, lng }) {
-    const map = useMap();
-    useEffect(() => {
-        if (lat && lng) map.flyTo([lat, lng], 13, { duration: 1.5 });
-    }, [lat, lng, map]);
-    return null;
-}
-
-// Fix standard leaflet markers
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/shadow-marker.png',
-});
 
 export default function InvestmentAnalysis() {
     const [region, setRegion] = useState('Pune');
@@ -88,10 +68,11 @@ export default function InvestmentAnalysis() {
                 data.push({
                     year: `Year ${i}`,
                     value: Math.round(currentVal),
-                    cost: Math.round(landInvestment + (i * 200000)) // Assuming 2L maintenance per year
+                    cost: Math.round(landInvestment + (i * 150000))
                 });
-                // Compound growth
-                currentVal += (currentVal * baseGrowthRate) + (Math.random() * 513000);
+                // Deterministic compound growth projection without random variations
+                const annualIncrement = (i + 1) * 35000;
+                currentVal += (currentVal * baseGrowthRate) + annualIncrement;
             }
 
             const finalValue = data[data.length - 1].value;
@@ -204,51 +185,6 @@ export default function InvestmentAnalysis() {
                                     {loading ? 'Running AI Model...' : 'Run Simulation'}
                                 </Button>
                             </Form>
-
-                            {/* Detailed Location stats and Leaflet Map */}
-                            {selectedLand && selectedLand.latitude && selectedLand.longitude && (
-                                <Card className="glass-panel border-0 text-white mt-4 overflow-hidden shadow-sm" style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <Card.Body className="p-0">
-                                        <div style={{ height: '220px', position: 'relative' }}>
-                                            <MapContainer
-                                                center={[selectedLand.latitude, selectedLand.longitude]}
-                                                zoom={13}
-                                                style={{ height: '100%', width: '100%', zIndex: 1 }}
-                                                zoomControl={false}
-                                            >
-                                                <TileLayer
-                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                    attribution='&copy; OpenStreetMap contributors'
-                                                />
-                                                <Marker position={[selectedLand.latitude, selectedLand.longitude]}>
-                                                    <Popup>
-                                                        <strong>{selectedLand.name}</strong><br />
-                                                        Soil: {selectedLand.soil}<br />
-                                                        Water Depth: {selectedLand.water}m
-                                                    </Popup>
-                                                </Marker>
-                                                <MapRecenter lat={selectedLand.latitude} lng={selectedLand.longitude} />
-                                            </MapContainer>
-                                        </div>
-                                        <div className="p-3 bg-dark bg-opacity-75">
-                                            <Row className="g-2 text-center text-secondary small">
-                                                <Col xs={4}>
-                                                    <div className="text-success fw-bold">{selectedLand.soil || 'N/A'}</div>
-                                                    <div style={{ fontSize: '10px' }}>Soil Type</div>
-                                                </Col>
-                                                <Col xs={4}>
-                                                    <div className="text-info fw-bold">{selectedLand.water || 'N/A'}m</div>
-                                                    <div style={{ fontSize: '10px' }}>Water Level</div>
-                                                </Col>
-                                                <Col xs={4}>
-                                                    <div className="text-warning fw-bold">{selectedLand.score || '75'}</div>
-                                                    <div style={{ fontSize: '10px' }}>Intelligence Score</div>
-                                                </Col>
-                                            </Row>
-                                        </div>
-                                    </Card.Body>
-                                </Card>
-                            )}
                         </Card.Body>
                     </Card>
                 </Col>
