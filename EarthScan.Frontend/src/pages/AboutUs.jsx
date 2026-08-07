@@ -16,7 +16,7 @@ export default function AboutUs() {
                     <Col md={10} lg={8}>
                         <Card className="glass-panel text-white border-0 shadow-lg p-5 text-center" style={{ background: 'rgba(10, 15, 24, 0.85)', backdropFilter: 'blur(10px)' }}>
                             <Card.Body>
-                                <h1 className="fw-bold mb-4">About <span style={{ color: '#00e676' }}>EarthScan</span> <span style={{ color: '#2979ff' }}>Bharat</span></h1>
+                                <h1 className="fw-bold mb-4"><span style={{ color: '#00e676' }}>EarthScan</span> <span style={{ color: '#2979ff' }}>Bharat</span></h1>
                                 <p className="lead mb-4">
                                     EarthScan Bharat is a revolutionary platform designed to empower the agricultural community with data-driven insights. 
                                     By leveraging geospatial intelligence, satellite data, and localized ground-truth information, we aim to bridge the gap between technology and the traditional farmer.
@@ -25,7 +25,7 @@ export default function AboutUs() {
                                     <Col md={6}>
                                         <div className="p-4 rounded border border-secondary h-100" style={{ background: 'rgba(255,255,255,0.05)' }}>
                                             <h4 className="fw-bold text-success mb-3"><i className="bi bi-bullseye"></i> Our Mission</h4>
-                                            <p className="small text-secondary mb-0">To democratize access to advanced agricultural data, helping farmers optimize crop yields, manage water resources efficiently, and secure better market prices.</p>
+                                            <p className="small text-secondary mb-0">To democratize access to advanced agricultural data, helping farmers optimize crop yields, manage water resources efficiently and secure better market prices.</p>
                                         </div>
                                     </Col>
                                     <Col md={6}>
