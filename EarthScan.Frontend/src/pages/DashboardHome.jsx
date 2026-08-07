@@ -401,6 +401,12 @@ export default function DashboardHome() {
                 initialLat = userLat;
                 initialLng = userLng;
                 hasCustomCoords = true;
+            } else {
+                const known = getKnownCoords(user.village, user.district, user.location, user.pincode);
+                if (known) {
+                    initialLat = known.lat;
+                    initialLng = known.lng;
+                }
             }
             if (user.pincode) {
                 initialPin = user.pincode;
@@ -430,6 +436,7 @@ export default function DashboardHome() {
         
         setPinCode(initialPin);
         setLocationName(initialLocName);
+        setCoords({ lat: initialLat, lng: initialLng });
 
         const initFarmerLocation = async () => {
             let lat = initialLat;
@@ -437,13 +444,38 @@ export default function DashboardHome() {
 
             // Resolve farmer location coordinates
             if (!hasCustomCoords) {
-                const known = getKnownCoords(initialLocName, user?.village, user?.district, user?.location);
+                const known = getKnownCoords(initialLocName, user?.village, user?.district, user?.location, user?.pincode);
                 if (known) {
                     lat = known.lat;
                     lng = known.lng;
+                } else if (initialPin && /^\d{6}$/.test(initialPin)) {
+                    try {
+                        const pinRes = await fetch(`https://api.postalpincode.in/pincode/${initialPin}`);
+                        if (pinRes.ok) {
+                            const pinData = await pinRes.json();
+                            if (pinData && pinData[0] && pinData[0].Status === 'Success' && pinData[0].PostOffice) {
+                                const sample = pinData[0].PostOffice[0];
+                                const dist = sample.District || sample.Name;
+                                const st = sample.State || 'Maharashtra';
+                                const pinKnown = getKnownCoords(dist, sample.Name);
+                                if (pinKnown) {
+                                    lat = pinKnown.lat;
+                                    lng = pinKnown.lng;
+                                } else {
+                                    const pinGeo = await geocodeCity(`${dist}, ${st}, India`);
+                                    if (pinGeo) {
+                                        lat = pinGeo.lat;
+                                        lng = pinGeo.lon;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Pincode geocoding error:', e);
+                    }
                 }
 
-                if (initialLocName) {
+                if (initialLocName && lat === 18.5204 && lng === 73.8567) {
                     const geo = await geocodeCity(initialLocName);
                     if (geo) {
                         lat = geo.lat;
@@ -453,12 +485,6 @@ export default function DashboardHome() {
                         if (distGeo) {
                             lat = distGeo.lat;
                             lng = distGeo.lon;
-                        }
-                    } else if (initialPin && /^\d{6}$/.test(initialPin)) {
-                        const pinGeo = await geocodeCity(`${initialPin}, India`);
-                        if (pinGeo) {
-                            lat = pinGeo.lat;
-                            lng = pinGeo.lon;
                         }
                     }
                 }
@@ -867,7 +893,7 @@ export default function DashboardHome() {
                             <p className="text-secondary small mb-3">{t('dashboard.gis_desc')}</p>
                             
                             <div className="flex-grow-1 rounded overflow-hidden border border-secondary" style={{ minHeight: '400px', borderColor: 'rgba(255,255,255,0.1) !important' }}>
-                                <MapContainer center={[coords.lat, coords.lng]} zoom={11} style={{ height: '400px', width: '100%' }}>
+                                <MapContainer key={`${coords.lat}-${coords.lng}`} center={[coords.lat, coords.lng]} zoom={11} style={{ height: '400px', width: '100%' }}>
                                     <TileLayer
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
