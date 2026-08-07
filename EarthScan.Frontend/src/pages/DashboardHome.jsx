@@ -518,7 +518,7 @@ export default function DashboardHome() {
                     }
                 }
 
-                if (initialLocName && (lat === 18.5204 || lat === 19.8347) && (lng === 73.8567 || lng === 75.8816)) {
+                if (initialLocName && lat === 18.5204 && lng === 73.8567) {
                     const geo = await geocodeCity(initialLocName);
                     if (geo) {
                         lat = geo.lat;
@@ -539,7 +539,7 @@ export default function DashboardHome() {
         };
 
         initFarmerLocation();
-    }, [user, t]);
+    }, [user]);
 
     async function loadWeather(lat, lng) {
         setWeatherLoading(true);
@@ -619,7 +619,7 @@ export default function DashboardHome() {
                         }
                         setLocationName(locName);
                         setPinCode(trimmedQuery);
-                        await loadWeather(geo ? geo.lat : 19.8347, geo ? geo.lon : 75.8816);
+                        await loadWeather(geo ? geo.lat : 18.5204, geo ? geo.lon : 73.8567);
                         await loadGroundwater(sample.State);
                         return;
                     }
