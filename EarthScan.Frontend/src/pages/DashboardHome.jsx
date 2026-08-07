@@ -370,10 +370,53 @@ const REGIONAL_SERVICES = [
 export default function DashboardHome() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [locationName, setLocationName] = useState('Pune, Maharashtra');
-    const [pinCode, setPinCode] = useState('411001');
+    const [locationName, setLocationName] = useState(() => {
+        try {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                const u = JSON.parse(stored);
+                const rawParts = [u.village || u.location, u.district, u.stateName || 'Maharashtra'].filter(Boolean);
+                const parts = [];
+                const seen = new Set();
+                for (const p of rawParts) {
+                    const k = p.trim().toLowerCase();
+                    if (!seen.has(k)) { seen.add(k); parts.push(p.trim()); }
+                }
+                if (parts.length > 0) return parts.join(', ');
+            }
+        } catch (e) {}
+        return 'Jalna, Maharashtra';
+    });
+
+    const [pinCode, setPinCode] = useState(() => {
+        try {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                const u = JSON.parse(stored);
+                if (u.pincode) return u.pincode;
+            }
+        } catch (e) {}
+        return '431203';
+    });
+
     const [soilType, setSoilType] = useState('');
-    const [coords, setCoords] = useState({ lat: 18.5204, lng: 73.8567 });
+
+    const [coords, setCoords] = useState(() => {
+        try {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                const u = JSON.parse(stored);
+                const userLat = parseFloat(u.latitude || u.Lat);
+                const userLng = parseFloat(u.longitude || u.Lon);
+                if (!isNaN(userLat) && !isNaN(userLng) && userLat !== 0 && userLng !== 0) {
+                    return { lat: userLat, lng: userLng };
+                }
+                const known = getKnownCoords(u.village, u.district, u.location, u.pincode);
+                if (known) return known;
+            }
+        } catch (e) {}
+        return { lat: 19.8347, lng: 75.8816 }; // Jalna coordinates
+    });
     const [weather, setWeather] = useState(null);
     const [weatherLoading, setWeatherLoading] = useState(true);
     const [gwStats, setGwStats] = useState(null);
@@ -387,10 +430,10 @@ export default function DashboardHome() {
     useEffect(() => {
         setSoilType(t('dashboard.soil_type') === 'Soil Type' ? 'Black Soil' : t('dashboard.soil_type'));
         
-        let initialLat = 18.5204;
-        let initialLng = 73.8567;
-        let initialPin = '411001';
-        let initialLocName = 'Pune, Maharashtra';
+        let initialLat = 19.8347;
+        let initialLng = 75.8816;
+        let initialPin = '431203';
+        let initialLocName = 'Jalna, Maharashtra';
         let stateVal = 'Maharashtra';
         let hasCustomCoords = false;
 
