@@ -19,7 +19,7 @@ export default function AboutUs() {
                                 <h1 className="fw-bold mb-4"><span style={{ color: '#00e676' }}>EarthScan</span> <span style={{ color: '#2979ff' }}>Bharat</span></h1>
                                 <p className="lead mb-4">
                                     EarthScan Bharat is a revolutionary platform designed to empower the agricultural community with data-driven insights. 
-                                    By leveraging geospatial intelligence, satellite data, and localized ground-truth information, we aim to bridge the gap between technology and the traditional farmer.
+                                    By leveraging geospatial intelligence, satellite data and localized ground-truth information, we aim to bridge the gap between technology and the traditional farmer.
                                 </p>
                                 <Row className="g-4 mb-5 text-start">
                                     <Col md={6}>
