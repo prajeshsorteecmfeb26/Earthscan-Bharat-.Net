@@ -54,6 +54,55 @@ function MapRecenter({ lat, lng }) {
     return null;
 }
 
+const DISTRICT_COORDS = {
+    'jalna': { lat: 19.8347, lng: 75.8816 },
+    'pune': { lat: 18.5204, lng: 73.8567 },
+    'mumbai': { lat: 19.0760, lng: 72.8777 },
+    'aurangabad': { lat: 19.8762, lng: 75.3433 },
+    'chhatrapati sambhajinagar': { lat: 19.8762, lng: 75.3433 },
+    'nagpur': { lat: 21.1458, lng: 79.0882 },
+    'nashik': { lat: 19.9975, lng: 73.7898 },
+    'solapur': { lat: 17.6599, lng: 75.9064 },
+    'kolhapur': { lat: 16.7050, lng: 74.2433 },
+    'amravati': { lat: 20.9374, lng: 77.7796 },
+    'latur': { lat: 18.4088, lng: 76.5604 },
+    'nanded': { lat: 19.1383, lng: 77.3210 },
+    'akola': { lat: 20.7002, lng: 77.0082 },
+    'dhule': { lat: 20.9042, lng: 74.7749 },
+    'ahmednagar': { lat: 19.0948, lng: 74.7480 },
+    'satara': { lat: 17.6805, lng: 74.0183 },
+    'beed': { lat: 18.9891, lng: 75.7601 },
+    'parbhani': { lat: 19.2644, lng: 76.7722 },
+    'sangli': { lat: 16.8524, lng: 74.5815 },
+    'buldhana': { lat: 20.5294, lng: 76.1843 },
+    'ratnagiri': { lat: 16.9902, lng: 73.3120 },
+    'yavatmal': { lat: 20.3888, lng: 78.1204 },
+    'bhandara': { lat: 21.1697, lng: 79.6521 },
+    'washim': { lat: 20.1107, lng: 77.1340 },
+    'hingoli': { lat: 19.7180, lng: 77.1487 },
+    'gadchiroli': { lat: 20.1848, lng: 80.0033 },
+    'gondia': { lat: 21.4624, lng: 80.2210 },
+    'wardha': { lat: 20.7453, lng: 78.6022 },
+    'palghar': { lat: 19.6966, lng: 72.7699 },
+    'nandurbar': { lat: 21.3683, lng: 74.2384 },
+    'sindhudurg': { lat: 16.1667, lng: 73.6667 },
+    'thane': { lat: 19.2183, lng: 72.9781 },
+    'raigad': { lat: 18.5158, lng: 73.1822 }
+};
+
+function getKnownCoords(...searchStrs) {
+    for (const str of searchStrs) {
+        if (!str) continue;
+        const lower = str.toString().toLowerCase();
+        for (const [key, coords] of Object.entries(DISTRICT_COORDS)) {
+            if (lower.includes(key)) {
+                return coords;
+            }
+        }
+    }
+    return null;
+}
+
 // Geocode city name → { lat, lon, state, district, postcode } via Nominatim (free, no key required)
 async function geocodeCity(query) {
     let finalQuery = query;
@@ -357,10 +406,20 @@ export default function DashboardHome() {
                 initialPin = user.pincode;
             }
             if (user.location || user.village) {
-                const parts = [user.village || user.location, user.district, user.stateName || 'Maharashtra'].filter(Boolean);
+                const rawParts = [user.village || user.location, user.district, user.stateName || 'Maharashtra'].filter(Boolean);
+                const parts = [];
+                const seen = new Set();
+                for (const p of rawParts) {
+                    const k = p.trim().toLowerCase();
+                    if (!seen.has(k)) {
+                        seen.add(k);
+                        parts.push(p.trim());
+                    }
+                }
                 initialLocName = parts.join(', ');
             } else if (user.district && user.stateName) {
-                initialLocName = `${user.district}, ${user.stateName}`;
+                const parts = Array.from(new Set([user.district, user.stateName].filter(Boolean)));
+                initialLocName = parts.join(', ');
             } else if (user.pincode) {
                 initialLocName = `${user.pincode}, Maharashtra`;
             }
@@ -376,17 +435,31 @@ export default function DashboardHome() {
             let lat = initialLat;
             let lng = initialLng;
 
-            // Geocode farmer city location if custom lat/lng is not set
-            if (!hasCustomCoords && initialLocName) {
-                const geo = await geocodeCity(initialLocName);
-                if (geo) {
-                    lat = geo.lat;
-                    lng = geo.lon;
-                } else if (initialPin && /^\d{6}$/.test(initialPin)) {
-                    const pinGeo = await geocodeCity(`${initialPin}, India`);
-                    if (pinGeo) {
-                        lat = pinGeo.lat;
-                        lng = pinGeo.lon;
+            // Resolve farmer location coordinates
+            if (!hasCustomCoords) {
+                const known = getKnownCoords(initialLocName, user?.village, user?.district, user?.location);
+                if (known) {
+                    lat = known.lat;
+                    lng = known.lng;
+                }
+
+                if (initialLocName) {
+                    const geo = await geocodeCity(initialLocName);
+                    if (geo) {
+                        lat = geo.lat;
+                        lng = geo.lon;
+                    } else if (user?.district) {
+                        const distGeo = await geocodeCity(`${user.district}, ${user.stateName || 'Maharashtra'}`);
+                        if (distGeo) {
+                            lat = distGeo.lat;
+                            lng = distGeo.lon;
+                        }
+                    } else if (initialPin && /^\d{6}$/.test(initialPin)) {
+                        const pinGeo = await geocodeCity(`${initialPin}, India`);
+                        if (pinGeo) {
+                            lat = pinGeo.lat;
+                            lng = pinGeo.lon;
+                        }
                     }
                 }
             }

@@ -26,7 +26,7 @@ export default function Register() {
             const userRole = user.role || user.Role;
             if (userRole === 'Admin') navigate('/admin');
             else if (userRole === 'Land Buyer') navigate('/search');
-            else if (userRole === 'Agriculture Expert') navigate('/expert/queries');
+            else if (userRole === 'Agriculture Expert') navigate('/expert/manage-crop');
             else navigate('/');
         }
     }, [user, navigate]);

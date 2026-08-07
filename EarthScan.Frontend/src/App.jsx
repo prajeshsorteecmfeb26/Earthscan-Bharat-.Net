@@ -347,13 +347,7 @@ function App() {
       } />
 
       {/* Agriculture Expert Routes */}
-      <Route path="/expert/queries" element={
-        <ProtectedRoute allowedRoles={['Agriculture Expert']}>
-          <MainLayout>
-            <AnswerQueries />
-          </MainLayout>
-        </ProtectedRoute>
-      } />
+      <Route path="/expert/queries" element={<Navigate to="/expert/manage-crop" replace />} />
       <Route path="/expert/manage-crop" element={
         <ProtectedRoute allowedRoles={['Agriculture Expert']}>
           <MainLayout>
