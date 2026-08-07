@@ -18,6 +18,25 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+const validateIndianPhone = (phone) => {
+    if (!phone) return false;
+    const cleanPhone = phone.toString().replace(/^(\+91|0|\s)/g, '').replace(/[\s\-]/g, '');
+    return /^[6-9]\d{9}$/.test(cleanPhone);
+};
+
+const validateAadhaarOrPan = (idValue) => {
+    if (!idValue || !idValue.trim()) return true; // Optional field
+    const cleanVal = idValue.toString().replace(/[\s\-]/g, '').trim();
+
+    // 12-digit Aadhaar starting with 2-9
+    const isAadhaar = /^[2-9]\d{11}$/.test(cleanVal);
+
+    // 10-character PAN card (5 letters, 4 digits, 1 letter)
+    const isPan = /^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$/.test(cleanVal);
+
+    return isAadhaar || isPan;
+};
+
 const FALLBACK_LAND_IMAGES = [
     'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80',
     'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=600&q=80',
@@ -1641,8 +1660,16 @@ export default function LandSearch() {
                     {selectedLand && (
                         <Form onSubmit={async (e) => {
                             e.preventDefault();
-                            if (!buyerName || !buyerPhone) {
-                                alert("Please fill in your Name and Phone Number.");
+                            if (!buyerName || buyerName.trim().length < 2) {
+                                alert("Please enter your official Full Name.");
+                                return;
+                            }
+                            if (!validateIndianPhone(buyerPhone)) {
+                                alert("Invalid Phone Number! Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.");
+                                return;
+                            }
+                            if (buyerIdCard && buyerIdCard.trim() !== '' && !validateAadhaarOrPan(buyerIdCard)) {
+                                alert("Invalid Aadhaar / PAN Number! Please enter a valid 12-digit Aadhaar number (e.g. 2345 6789 0123) or 10-character PAN card number (e.g. ABCDE1234F).");
                                 return;
                             }
                             try {
@@ -1749,11 +1776,17 @@ export default function LandSearch() {
                                 <Form.Control
                                     type="text"
                                     value={buyerPhone}
-                                    onChange={(e) => setBuyerPhone(e.target.value.replace(/[^\d+]/g, ''))}
+                                    onChange={(e) => setBuyerPhone(e.target.value)}
                                     required
-                                    placeholder="Enter your phone number"
-                                    className="bg-transparent text-white border-secondary shadow-none"
+                                    placeholder="Enter 10-digit mobile number"
+                                    className={`bg-transparent text-white border-secondary shadow-none ${buyerPhone && !validateIndianPhone(buyerPhone) ? 'is-invalid border-danger' : ''}`}
                                 />
+                                {buyerPhone && !validateIndianPhone(buyerPhone) && (
+                                    <Form.Text className="text-danger small d-block mt-1">
+                                        <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                                        Must be a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.
+                                    </Form.Text>
+                                )}
                             </Form.Group>
                             <Form.Group className="mb-3">
                                 <Form.Label className="text-secondary small">Aadhaar / PAN Number (Optional)</Form.Label>
@@ -1761,12 +1794,23 @@ export default function LandSearch() {
                                     type="text"
                                     value={buyerIdCard}
                                     onChange={(e) => setBuyerIdCard(e.target.value)}
-                                    placeholder="e.g. XXXX-XXXX-XXXX"
-                                    className="bg-transparent text-white border-secondary shadow-none"
+                                    placeholder="e.g. 2345-6789-0123 or ABCDE1234F"
+                                    className={`bg-transparent text-white border-secondary shadow-none ${buyerIdCard && !validateAadhaarOrPan(buyerIdCard) ? 'is-invalid border-danger' : ''}`}
                                 />
+                                {buyerIdCard && !validateAadhaarOrPan(buyerIdCard) && (
+                                    <Form.Text className="text-danger small d-block mt-1">
+                                        <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                                        Must be a valid 12-digit Aadhaar number (e.g. 2345 6789 0123) or 10-character PAN (e.g. ABCDE1234F).
+                                    </Form.Text>
+                                )}
                             </Form.Group>
 
-                            <Button variant="warning" type="submit" className="w-100 py-2.5 fw-bold text-dark mt-2">
+                            <Button 
+                                variant="warning" 
+                                type="submit" 
+                                className="w-100 py-2.5 fw-bold text-dark mt-2"
+                                disabled={!buyerName || !validateIndianPhone(buyerPhone) || (buyerIdCard && !validateAadhaarOrPan(buyerIdCard))}
+                            >
                                 Confirm & Complete Purchase
                             </Button>
                         </Form>

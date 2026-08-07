@@ -26,7 +26,7 @@ export default function Register() {
             const userRole = user.role || user.Role;
             if (userRole === 'Admin') navigate('/admin');
             else if (userRole === 'Land Buyer') navigate('/search');
-            else if (userRole === 'Agriculture Expert') navigate('/expert/queries');
+            else if (userRole === 'Agriculture Expert') navigate('/expert/manage-crop');
             else navigate('/');
         }
     }, [user, navigate]);
@@ -125,8 +125,9 @@ export default function Register() {
             newErrors.password = 'Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.';
         }
 
-        if (phone && !/^\+?[0-9\s\-]{10,15}$/.test(phone)) {
-            newErrors.phone = 'Please enter a valid phone number.';
+        const cleanPhone = (phone || '').toString().replace(/^(\+91|0|\s)/g, '').replace(/[\s\-]/g, '');
+        if (phone && !/^[6-9]\d{9}$/.test(cleanPhone)) {
+            newErrors.phone = 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.';
         }
 
         if (pincode && pincode.length !== 6) {
@@ -182,7 +183,7 @@ export default function Register() {
                                         required
                                         isInvalid={!!errors.name}
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="e.g. Arjun Singh"
+                                        placeholder="Full Name"
                                     />
                                     <Form.Control.Feedback type="invalid">
                                         {errors.name}
@@ -190,7 +191,7 @@ export default function Register() {
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
-                                    <Form.Label className="text-secondary small">Email Address</Form.Label>
+                                    <Form.Label className="text-secondary small">Email</Form.Label>
                                     <Form.Control
                                         type="email"
                                         value={email}
@@ -214,7 +215,7 @@ export default function Register() {
                                         required
                                         isInvalid={!!errors.phone}
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="e.g. +91 9876543210"
+                                        placeholder="e.g. 9876543210"
                                     />
                                     <Form.Control.Feedback type="invalid">
                                         {errors.phone}
@@ -272,7 +273,7 @@ export default function Register() {
                                         required
                                         isInvalid={!!errors.password}
                                         className="bg-transparent text-white border-secondary shadow-none"
-                                        placeholder="Minimum 6 characters"
+                                        placeholder="Password"
                                     />
                                     <Form.Control.Feedback type="invalid">
                                         {errors.password}

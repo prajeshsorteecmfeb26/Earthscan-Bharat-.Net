@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Box, AppBar, Toolbar, Typography, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText, Button, Avatar } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -347,13 +347,7 @@ function App() {
       } />
 
       {/* Agriculture Expert Routes */}
-      <Route path="/expert/queries" element={
-        <ProtectedRoute allowedRoles={['Agriculture Expert']}>
-          <MainLayout>
-            <AnswerQueries />
-          </MainLayout>
-        </ProtectedRoute>
-      } />
+      <Route path="/expert/queries" element={<Navigate to="/expert/manage-crop" replace />} />
       <Route path="/expert/manage-crop" element={
         <ProtectedRoute allowedRoles={['Agriculture Expert']}>
           <MainLayout>

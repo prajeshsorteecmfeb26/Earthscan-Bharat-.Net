@@ -54,6 +54,55 @@ function MapRecenter({ lat, lng }) {
     return null;
 }
 
+const DISTRICT_COORDS = {
+    'jalna': { lat: 19.8347, lng: 75.8816 },
+    'pune': { lat: 18.5204, lng: 73.8567 },
+    'mumbai': { lat: 19.0760, lng: 72.8777 },
+    'aurangabad': { lat: 19.8762, lng: 75.3433 },
+    'chhatrapati sambhajinagar': { lat: 19.8762, lng: 75.3433 },
+    'nagpur': { lat: 21.1458, lng: 79.0882 },
+    'nashik': { lat: 19.9975, lng: 73.7898 },
+    'solapur': { lat: 17.6599, lng: 75.9064 },
+    'kolhapur': { lat: 16.7050, lng: 74.2433 },
+    'amravati': { lat: 20.9374, lng: 77.7796 },
+    'latur': { lat: 18.4088, lng: 76.5604 },
+    'nanded': { lat: 19.1383, lng: 77.3210 },
+    'akola': { lat: 20.7002, lng: 77.0082 },
+    'dhule': { lat: 20.9042, lng: 74.7749 },
+    'ahmednagar': { lat: 19.0948, lng: 74.7480 },
+    'satara': { lat: 17.6805, lng: 74.0183 },
+    'beed': { lat: 18.9891, lng: 75.7601 },
+    'parbhani': { lat: 19.2644, lng: 76.7722 },
+    'sangli': { lat: 16.8524, lng: 74.5815 },
+    'buldhana': { lat: 20.5294, lng: 76.1843 },
+    'ratnagiri': { lat: 16.9902, lng: 73.3120 },
+    'yavatmal': { lat: 20.3888, lng: 78.1204 },
+    'bhandara': { lat: 21.1697, lng: 79.6521 },
+    'washim': { lat: 20.1107, lng: 77.1340 },
+    'hingoli': { lat: 19.7180, lng: 77.1487 },
+    'gadchiroli': { lat: 20.1848, lng: 80.0033 },
+    'gondia': { lat: 21.4624, lng: 80.2210 },
+    'wardha': { lat: 20.7453, lng: 78.6022 },
+    'palghar': { lat: 19.6966, lng: 72.7699 },
+    'nandurbar': { lat: 21.3683, lng: 74.2384 },
+    'sindhudurg': { lat: 16.1667, lng: 73.6667 },
+    'thane': { lat: 19.2183, lng: 72.9781 },
+    'raigad': { lat: 18.5158, lng: 73.1822 }
+};
+
+function getKnownCoords(...searchStrs) {
+    for (const str of searchStrs) {
+        if (!str) continue;
+        const lower = str.toString().toLowerCase();
+        for (const [key, coords] of Object.entries(DISTRICT_COORDS)) {
+            if (lower.includes(key)) {
+                return coords;
+            }
+        }
+    }
+    return null;
+}
+
 // Geocode city name → { lat, lon, state, district, postcode } via Nominatim (free, no key required)
 async function geocodeCity(query) {
     let finalQuery = query;
@@ -321,10 +370,53 @@ const REGIONAL_SERVICES = [
 export default function DashboardHome() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [locationName, setLocationName] = useState('Pune, Maharashtra');
-    const [pinCode, setPinCode] = useState('411001');
+    const [locationName, setLocationName] = useState(() => {
+        try {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                const u = JSON.parse(stored);
+                const rawParts = [u.village || u.location, u.district, u.stateName || 'Maharashtra'].filter(Boolean);
+                const parts = [];
+                const seen = new Set();
+                for (const p of rawParts) {
+                    const k = p.trim().toLowerCase();
+                    if (!seen.has(k)) { seen.add(k); parts.push(p.trim()); }
+                }
+                if (parts.length > 0) return parts.join(', ');
+            }
+        } catch (e) {}
+        return 'Jalna, Maharashtra';
+    });
+
+    const [pinCode, setPinCode] = useState(() => {
+        try {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                const u = JSON.parse(stored);
+                if (u.pincode) return u.pincode;
+            }
+        } catch (e) {}
+        return '431203';
+    });
+
     const [soilType, setSoilType] = useState('');
-    const [coords, setCoords] = useState({ lat: 18.5204, lng: 73.8567 });
+
+    const [coords, setCoords] = useState(() => {
+        try {
+            const stored = localStorage.getItem('user');
+            if (stored) {
+                const u = JSON.parse(stored);
+                const userLat = parseFloat(u.latitude || u.Lat);
+                const userLng = parseFloat(u.longitude || u.Lon);
+                if (!isNaN(userLat) && !isNaN(userLng) && userLat !== 0 && userLng !== 0) {
+                    return { lat: userLat, lng: userLng };
+                }
+                const known = getKnownCoords(u.village, u.district, u.location, u.pincode);
+                if (known) return known;
+            }
+        } catch (e) {}
+        return { lat: 19.8347, lng: 75.8816 }; // Jalna coordinates
+    });
     const [weather, setWeather] = useState(null);
     const [weatherLoading, setWeatherLoading] = useState(true);
     const [gwStats, setGwStats] = useState(null);
@@ -334,40 +426,119 @@ export default function DashboardHome() {
     const { user, updateUser } = React.useContext(AuthContext);
     const { t } = useTranslation();
 
-    // Initial load: fetch weather and groundwater
+    // Initial load: fetch location, weather and groundwater
     useEffect(() => {
         setSoilType(t('dashboard.soil_type') === 'Soil Type' ? 'Black Soil' : t('dashboard.soil_type'));
         
-        let initialLat = 18.5204;
-        let initialLng = 73.8567;
-        let initialPin = '411001';
-        let initialLocName = 'Pune, Maharashtra';
+        let initialLat = 19.8347;
+        let initialLng = 75.8816;
+        let initialPin = '431203';
+        let initialLocName = 'Jalna, Maharashtra';
         let stateVal = 'Maharashtra';
+        let hasCustomCoords = false;
 
         if (user) {
-            if (user.latitude && user.longitude) {
-                initialLat = parseFloat(user.latitude);
-                initialLng = parseFloat(user.longitude);
+            const userLat = parseFloat(user.latitude || user.Lat);
+            const userLng = parseFloat(user.longitude || user.Lon);
+            if (!isNaN(userLat) && !isNaN(userLng) && userLat !== 0 && userLng !== 0) {
+                initialLat = userLat;
+                initialLng = userLng;
+                hasCustomCoords = true;
+            } else {
+                const known = getKnownCoords(user.village, user.district, user.location, user.pincode);
+                if (known) {
+                    initialLat = known.lat;
+                    initialLng = known.lng;
+                }
             }
             if (user.pincode) {
                 initialPin = user.pincode;
             }
             if (user.location || user.village) {
-                initialLocName = user.location || `${user.village}, ${user.district || ''}, ${user.stateName || ''}`;
+                const rawParts = [user.village || user.location, user.district, user.stateName || 'Maharashtra'].filter(Boolean);
+                const parts = [];
+                const seen = new Set();
+                for (const p of rawParts) {
+                    const k = p.trim().toLowerCase();
+                    if (!seen.has(k)) {
+                        seen.add(k);
+                        parts.push(p.trim());
+                    }
+                }
+                initialLocName = parts.join(', ');
             } else if (user.district && user.stateName) {
-                initialLocName = `${user.district}, ${user.stateName}`;
+                const parts = Array.from(new Set([user.district, user.stateName].filter(Boolean)));
+                initialLocName = parts.join(', ');
+            } else if (user.pincode) {
+                initialLocName = `${user.pincode}, Maharashtra`;
             }
             if (user.stateName) {
                 stateVal = user.stateName;
             }
         }
         
-        setCoords({ lat: initialLat, lng: initialLng });
         setPinCode(initialPin);
         setLocationName(initialLocName);
-        
-        loadWeather(initialLat, initialLng);
-        loadGroundwater(stateVal).finally(() => setLoading(false));
+        setCoords({ lat: initialLat, lng: initialLng });
+
+        const initFarmerLocation = async () => {
+            let lat = initialLat;
+            let lng = initialLng;
+
+            // Resolve farmer location coordinates
+            if (!hasCustomCoords) {
+                const known = getKnownCoords(initialLocName, user?.village, user?.district, user?.location, user?.pincode);
+                if (known) {
+                    lat = known.lat;
+                    lng = known.lng;
+                } else if (initialPin && /^\d{6}$/.test(initialPin)) {
+                    try {
+                        const pinRes = await fetch(`https://api.postalpincode.in/pincode/${initialPin}`);
+                        if (pinRes.ok) {
+                            const pinData = await pinRes.json();
+                            if (pinData && pinData[0] && pinData[0].Status === 'Success' && pinData[0].PostOffice) {
+                                const sample = pinData[0].PostOffice[0];
+                                const dist = sample.District || sample.Name;
+                                const st = sample.State || 'Maharashtra';
+                                const pinKnown = getKnownCoords(dist, sample.Name);
+                                if (pinKnown) {
+                                    lat = pinKnown.lat;
+                                    lng = pinKnown.lng;
+                                } else {
+                                    const pinGeo = await geocodeCity(`${dist}, ${st}, India`);
+                                    if (pinGeo) {
+                                        lat = pinGeo.lat;
+                                        lng = pinGeo.lon;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Pincode geocoding error:', e);
+                    }
+                }
+
+                if (initialLocName && lat === 18.5204 && lng === 73.8567) {
+                    const geo = await geocodeCity(initialLocName);
+                    if (geo) {
+                        lat = geo.lat;
+                        lng = geo.lon;
+                    } else if (user?.district) {
+                        const distGeo = await geocodeCity(`${user.district}, ${user.stateName || 'Maharashtra'}`);
+                        if (distGeo) {
+                            lat = distGeo.lat;
+                            lng = distGeo.lon;
+                        }
+                    }
+                }
+            }
+
+            setCoords({ lat, lng });
+            loadWeather(lat, lng);
+            loadGroundwater(stateVal).finally(() => setLoading(false));
+        };
+
+        initFarmerLocation();
     }, [user]);
 
     async function loadWeather(lat, lng) {
@@ -765,7 +936,7 @@ export default function DashboardHome() {
                             <p className="text-secondary small mb-3">{t('dashboard.gis_desc')}</p>
                             
                             <div className="flex-grow-1 rounded overflow-hidden border border-secondary" style={{ minHeight: '400px', borderColor: 'rgba(255,255,255,0.1) !important' }}>
-                                <MapContainer center={[coords.lat, coords.lng]} zoom={11} style={{ height: '400px', width: '100%' }}>
+                                <MapContainer key={`${coords.lat}-${coords.lng}`} center={[coords.lat, coords.lng]} zoom={11} style={{ height: '400px', width: '100%' }}>
                                     <TileLayer
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
