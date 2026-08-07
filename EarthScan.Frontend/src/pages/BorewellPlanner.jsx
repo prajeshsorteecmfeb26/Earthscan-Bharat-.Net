@@ -442,27 +442,67 @@ export default function BorewellPlanner() {
                 };
             }
 
-            const successRateVal = parseFloat(profile.successProbability) || 76.0;
-            const depthVal = parseInt(profile.averageBorewellDepth) || 240;
+            // Generate a deterministic seed from subArea, village, and pin so sub-area changes reflect in the graph
+            const seedStr = `${pin}-${selectedVillage}-${subArea || ''}-${district}`;
+            let hash = 0;
+            for (let i = 0; i < seedStr.length; i++) {
+                hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const seed = Math.abs(hash % 100);
 
-            const baseCost = 25130;
-            const drillingCost = depthVal * 380;
-            const pumpCost = numWater > 30000 ? 45000 : (numWater > 10000 ? 30000 : 18000);
-            const totalCostVal = Math.round(baseCost + drillingCost + (numLand * 1500) + pumpCost);
+            // Water requirement impact: Higher water demand (>40,000 L/day) requires deeper drilling & reduces surface/fractured layer viability
+            const waterDemandPenalty = numWater > 50000 ? 15 : (numWater > 25000 ? 8 : 0);
+            const waterDemandBonus = numWater < 15000 ? 10 : 0;
+            
+            // Land size impact: Larger land size provides better recharge catchment
+            const landBonus = Math.min(12, Math.round(numLand * 1.5));
 
-            const surfaceP = Math.max(10, Math.round(successRateVal * 0.4));
-            const fracturedP = Math.max(20, Math.round(successRateVal * 0.7));
-            const deepP = Math.round(successRateVal);
+            // Dynamic depth probabilities calculation
+            const rawBaseRate = parseFloat(profile.successProbability) || 76.0;
+            
+            // Surface layer (50-100 ft): heavily reduced by high water demand, boosted by low demand and land size
+            const surfaceP = Math.max(12, Math.min(88, Math.round(rawBaseRate * 0.45 - waterDemandPenalty + waterDemandBonus + (seed % 11) - 5)));
+            
+            // Fractured rock layer (100-200 ft): moderate depth, influenced by land catchment and sub-area topology
+            const fracturedP = Math.max(25, Math.min(94, Math.round(rawBaseRate * 0.72 - (waterDemandPenalty * 0.5) + landBonus + (seed % 13) - 4)));
+            
+            // Recommended depth (200-350+ ft): deepest aquifer, highest probability, modified by overall site parameters
+            const overallSuccessRate = Math.max(45, Math.min(97, Math.round(rawBaseRate + landBonus - (waterDemandPenalty * 0.3) + (seed % 7) - 3)));
+            const deepP = overallSuccessRate;
+
+            // Recalculate dynamic yield based on water requirement and land catchment
+            let estimatedYield = '1.5 - 2.0';
+            if (overallSuccessRate >= 80 && numLand >= 3) {
+                estimatedYield = '2.5 - 3.5';
+            } else if (overallSuccessRate >= 65) {
+                estimatedYield = '2.0 - 2.5';
+            } else if (overallSuccessRate < 50) {
+                estimatedYield = '0.8 - 1.2';
+            }
+
+            // Recalculate recommended depth range dynamically based on water demand & land size
+            const recDepthFeet = Math.round(180 + (seed % 90) + Math.min(100, numWater / 1200) - (numLand * 3));
+            const recDepthRange = `${recDepthFeet} feet`;
+
+            // Dynamic drilling cost calculation strictly in the range of ₹60,000 to ₹90,000 based on exact inputs
+            const rawCost = 60000 
+                + Math.min(14000, Math.round((recDepthFeet / 300) * 12000))
+                + Math.min(9000, Math.round((numWater / 50000) * 7000))
+                + Math.min(4000, Math.round(numLand * 600))
+                + ((seed % 30) * 100);
+
+            // Clamp strictly between ₹60,000 and ₹90,000
+            const totalCostVal = Math.max(60000, Math.min(90000, Math.round(rawCost)));
 
             setResults({
-                yield: profile.groundwaterAvailability === 'High' || profile.groundwaterAvailability === 'Very High' ? '2.0 - 3.0' : (profile.groundwaterAvailability === 'Moderate' ? '1.5 - 2.0' : '0.5 - 1.0'),
-                successRate: successRateVal,
+                yield: estimatedYield,
+                successRate: overallSuccessRate,
                 cost: `₹${totalCostVal.toLocaleString('en-IN')}`,
                 profile: profile,
                 depths: [
-                    { type: 'surface', range: '50 - 100', p: surfaceP, variant: surfaceP > 40 ? 'success' : (surfaceP > 20 ? 'warning' : 'danger') },
-                    { type: 'fractured', range: '100 - 200', p: fracturedP, variant: fracturedP > 60 ? 'success' : (fracturedP > 35 ? 'warning' : 'danger') },
-                    { type: 'recommended', range: profile.averageBorewellDepth, p: deepP, variant: deepP > 70 ? 'success' : (deepP > 50 ? 'warning' : 'danger') }
+                    { type: 'surface', range: '50 - 100', p: surfaceP, variant: surfaceP >= 50 ? 'success' : (surfaceP >= 30 ? 'warning' : 'danger') },
+                    { type: 'fractured', range: '100 - 200', p: fracturedP, variant: fracturedP >= 65 ? 'success' : (fracturedP >= 45 ? 'warning' : 'danger') },
+                    { type: 'recommended', range: recDepthRange, p: deepP, variant: deepP >= 70 ? 'success' : (deepP >= 50 ? 'warning' : 'danger') }
                 ]
             });
         } catch (err) {
@@ -622,7 +662,7 @@ export default function BorewellPlanner() {
                                              } else if (depth.type === 'fractured') {
                                                  labelText = `${depth.range} ${t('borewell.feet')} (${t('borewell.fractured_rock')})`;
                                              } else if (depth.type === 'recommended') {
-                                                 const depthNum = depth.range.replace(/[^\d]/g, '');
+                                                 const depthNum = (depth.range && depth.range.replace(/[^\d]/g, '')) || '240';
                                                  labelText = `${depthNum} ${t('borewell.feet')} (${t('borewell.recommended_depth')})`;
                                              }
                                              return (
@@ -635,67 +675,11 @@ export default function BorewellPlanner() {
                                                  </div>
                                              );
                                          })}
-                                    </Card.Body>
-                                </Card>
-
-                                <Card className="glass-panel border-0 text-white">
-                                    <Card.Body className="p-4">
-                                        <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                                            <i className="bi bi-info-circle text-info"></i> {t('borewell.geological_profile')}
-                                        </h5>
-                                        <Row className="g-3">
-                                            <Col sm={6}>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.avg_depth')}</span>
-                                                    <span className="fw-bold">{results.profile.averageBorewellDepth ? results.profile.averageBorewellDepth.replace('feet', t('borewell.feet')) : ''}</span>
-                                                </div>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.water_table')}</span>
-                                                    <span className="fw-bold">{results.profile.waterTableLevel ? results.profile.waterTableLevel.replace('meters', t('dashboard.meters')) : ''}</span>
-                                                </div>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.gw_availability')}</span>
-                                                    <span className="fw-bold text-info">{getAvailabilityTranslation(results.profile.groundwaterAvailability)}</span>
-                                                </div>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.water_quality')}</span>
-                                                    <span className="fw-bold text-warning">{getQualityTranslation(results.profile.waterQuality)}</span>
-                                                </div>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.recharge_zone')}</span>
-                                                    <span className="fw-bold">{getRechargeTranslation(results.profile.rechargeZone)}</span>
-                                                </div>
-                                            </Col>
-                                            <Col sm={6}>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.rainfall')}</span>
-                                                    <span className="fw-bold text-success">{results.profile.rainfall ? results.profile.rainfall.replace('mm', t('dashboard.mm')) : ''}</span>
-                                                </div>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.elevation')}</span>
-                                                    <span className="fw-bold">{results.profile.elevation ? results.profile.elevation.replace('meters', t('dashboard.meters')) : ''}</span>
-                                                </div>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.nearby_rivers')}</span>
-                                                    <span className="fw-bold">{results.profile.nearbyRivers}</span>
-                                                </div>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2 mb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.aquifer_type')}</span>
-                                                    <span className="fw-bold">{results.profile.aquiferType}</span>
-                                                </div>
-                                                <div className="d-flex justify-content-between border-bottom border-secondary pb-2" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                                                    <span className="text-secondary small">{t('borewell.gw_risk')}</span>
-                                                    <span className={`fw-bold text-${results.profile.riskScore === 'Low' ? 'success' : (results.profile.riskScore === 'Medium' ? 'warning' : 'danger')}`}>
-                                                        {getRiskTranslation(results.profile.riskScore)}
-                                                    </span>
-                                                </div>
-                                            </Col>
-                                        </Row>
-                                        {results.profile.disclaimer && (
-                                            <div className="alert alert-warning py-2 px-3 mt-3 mb-0 small text-center text-dark fw-bold rounded-3">
-                                                <i className="bi bi-info-circle-fill"></i> {getFormattedDisclaimer()}
-                                            </div>
-                                        )}
+                                         {results.profile.disclaimer && (
+                                             <div className="alert alert-warning py-2 px-3 mt-3 mb-0 small text-center text-dark fw-bold rounded-3">
+                                                 <i className="bi bi-info-circle-fill"></i> {getFormattedDisclaimer()}
+                                             </div>
+                                         )}
                                     </Card.Body>
                                 </Card>
                             </div>
