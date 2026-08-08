@@ -199,21 +199,7 @@ namespace EarthScan.Backend.Controllers
                 })
                 .ToListAsync();
 
-            // 2. Gather crop disease checks
-            var diseases = await _context.DiseasePredictions
-                .Where(d => d.UserId == userId)
-                .Select(d => new
-                {
-                    Id = "disease_" + d.Id,
-                    Type = "Disease",
-                    Category = "Crop Analyzer",
-                    Title = d.ImagePath,
-                    Description = $"Detected: {d.DiseaseName} ({d.Confidence}% Confidence)",
-                    Date = d.CreatedAt
-                })
-                .ToListAsync();
-
-            // 3. Gather uploaded soil reports
+            // 2. Gather uploaded soil reports
             var soilReports = await _context.SoilReports
                 .Where(s => s.UserId == userId && s.IsValid == true)
                 .Select(s => new
@@ -227,7 +213,7 @@ namespace EarthScan.Backend.Controllers
                 })
                 .ToListAsync();
 
-            // 4. Gather chat queries
+            // 3. Gather chat queries
             var chats = await _context.AIChatHistories
                 .Where(c => c.UserId == userId)
                 .Select(c => new
@@ -243,7 +229,6 @@ namespace EarthScan.Backend.Controllers
 
             // Merge and sort by date descending
             var allHistory = searches
-                .Concat(diseases)
                 .Concat(soilReports)
                 .Concat(chats)
                 .OrderByDescending(h => h.Date)

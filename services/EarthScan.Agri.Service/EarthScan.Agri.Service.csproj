@@ -45,7 +45,6 @@
   <ItemGroup>
     <Compile Include="..\..\EarthScan.Backend\Controllers\MandiController.cs" LinkBase="Shared\Controllers" />
     <Compile Include="..\..\EarthScan.Backend\Controllers\SchemesController.cs" LinkBase="Shared\Controllers" />
-    <Compile Include="..\..\EarthScan.Backend\Controllers\DiseaseController.cs" LinkBase="Shared\Controllers" />
     <Compile Include="..\..\EarthScan.Backend\Services\MandiUpdateWorker.cs" LinkBase="Shared\Services" />
   </ItemGroup>
 

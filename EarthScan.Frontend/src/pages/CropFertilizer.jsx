@@ -29,12 +29,6 @@ export default function CropFertilizer() {
     const [soilFile, setSoilFile] = useState(null);
     const [uploadingSoil, setUploadingSoil] = useState(false);
 
-    // Disease AI detection state
-    const [cropCategory, setCropCategory] = useState('Cotton');
-    const [diseaseFile, setDiseaseFile] = useState(null);
-    const [detectingDisease, setDetectingDisease] = useState(false);
-    const [diseaseResult, setDiseaseResult] = useState(null);
-
     // Active tab
     const [activeTab, setActiveTab] = useState('advisor');
 
@@ -189,30 +183,6 @@ export default function CropFertilizer() {
             alert("Soil report values extracted successfully and filled into fields!");
         } finally {
             setUploadingSoil(false);
-        }
-    };
-
-    const handleDiseaseDetect = async (e) => {
-        e.preventDefault();
-        if (!diseaseFile) return;
-        setDetectingDisease(true);
-        setDiseaseResult(null);
-        const formData = new FormData();
-        formData.append('file', diseaseFile);
-        formData.append('cropCategory', cropCategory);
-        formData.append('userId', userId);
-        formData.append('lang', i18n.language);
-
-        try {
-            const res = await axios.post(`${API_BASE_URL}/api/disease/detect`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            setDiseaseResult(res.data);
-        } catch (err) {
-            console.error("Disease detection failed:", err);
-            alert(err.response?.data?.message || "Failed to analyze leaf disease image.");
-        } finally {
-            setDetectingDisease(false);
         }
     };
 

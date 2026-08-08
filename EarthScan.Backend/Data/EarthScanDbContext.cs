@@ -16,7 +16,6 @@ namespace EarthScan.Backend.Data
         public DbSet<MandiPrice> MandiPrices { get; set; }
         public DbSet<MandiHistory> MandiHistories { get; set; }
         public DbSet<SoilReport> SoilReports { get; set; }
-        public DbSet<DiseasePrediction> DiseasePredictions { get; set; }
         public DbSet<AIChatHistory> AIChatHistories { get; set; }
         public DbSet<GovernmentScheme> GovernmentSchemes { get; set; }
         public DbSet<UserSearchHistory> UserSearchHistories { get; set; }

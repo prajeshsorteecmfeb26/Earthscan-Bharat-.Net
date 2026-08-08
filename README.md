@@ -67,7 +67,6 @@ migrations until the database answers (up to 15 attempts, 5 s apart).
                                          │    │    │
              /api/mandi   ───────────────┘    │    │
              /api/schemes                     │    │
-             /api/disease                     │    │
                                               │    │
              /api/groundwater ────────────────┘    │
                                                    │
@@ -91,7 +90,7 @@ migrations until the database answers (up to 15 attempts, 5 s apart).
 |---|---|---|---|
 | **Identity** | 5001 | `AuthController`, `ProfileController`, `AdminController` | `earthscan_identity` |
 | **Land** | 5002 | `LandsController`, `SoilController` (+ `GovernmentSatbaraService`) | `earthscan_land` |
-| **Agri** | 5003 | `MandiController`, `SchemesController`, `DiseaseController` (+ `MandiUpdateWorker`) | `earthscan_agri` |
+| **Agri** | 5003 | `MandiController`, `SchemesController` (+ `MandiUpdateWorker`) | `earthscan_agri` |
 | **Water** | 5004 | `GroundwaterController` | `earthscan_water` |
 | **Community** | 5005 | `ForumController`, `SupportQueriesController`, `AiController` | `earthscan_community` |
 | **Gateway** | 5130 | YARP reverse proxy, no business logic | — |
@@ -99,9 +98,9 @@ migrations until the database answers (up to 15 attempts, 5 s apart).
 All five services validate JWTs with the **same key, issuer and audience**, so a token
 issued by `POST /api/auth/login` is accepted by every other service.
 
-Static uploads keep working: the gateway routes `/uploads/profiles/*` to Identity,
-`/uploads/lands/*` to Land and `/uploads/diseases/*` to Agri, and each of those has a
-named Docker volume so images survive `docker compose down`.
+Static uploads keep working: the gateway routes `/uploads/profiles/*` to Identity
+and `/uploads/lands/*` to Land, and each of those has a named Docker volume so images
+survive `docker compose down`.
 
 ---
 
@@ -148,7 +147,6 @@ EarthScan/
 <ItemGroup>
   <Compile Include="..\..\EarthScan.Backend\Controllers\MandiController.cs"   LinkBase="Shared\Controllers" />
   <Compile Include="..\..\EarthScan.Backend\Controllers\SchemesController.cs" LinkBase="Shared\Controllers" />
-  <Compile Include="..\..\EarthScan.Backend\Controllers\DiseaseController.cs" LinkBase="Shared\Controllers" />
   <Compile Include="..\..\EarthScan.Backend\Services\MandiUpdateWorker.cs"    LinkBase="Shared\Services" />
 </ItemGroup>
 ```
@@ -211,7 +209,7 @@ dotnet test tests/EarthScan.Identity.Tests
 |---|---|
 | **Identity** | registration (BCrypt hashing, duplicate email), login (JWT shape, wrong password, unknown user), password reset, admin user CRUD + role guard, profile read/update, role-escalation is ignored, photo upload validation, activity history ordering |
 | **Land** | listing CRUD, Satbara survey-number validation and unverified response, upload file-type guard, investment analysis argument/-404/-missing-key paths, soil report PDF-only + 5 MB guards, crop recommendation validation |
-| **Agri** | cached mandi fallback when data.gov.in is not configured, commodity filtering, stored price history ordering, deterministic 7-day fallback series, scheme catalogue, disease upload validation (format, size, empty) |
+| **Agri** | cached mandi fallback when data.gov.in is not configured, commodity filtering, stored price history ordering, deterministic 7-day fallback series, scheme catalogue |
 | **Water** | state statistics lookup (found / case-insensitive / unknown), borewell planner argument validation, no search history written on failure |
 | **Community** | forum posts ordering + comments, author taken from JWT claims, comment on missing post, support queries (newest-first, case-insensitive email, required fields, title truncation, reply flow), Krishi Mitra validation and missing-key path |
 
@@ -269,7 +267,7 @@ read across bounded contexts now only see their own schema:
 
 | Endpoint | Behaviour | Why |
 |---|---|---|
-| `GET /api/profile/history/{userId}` | returns only rows in `earthscan_identity` | `ProfileController` reads `SoilReports`, `DiseasePredictions` and `AIChatHistories`, which are now written by the Land, Agri and Community services into their own schemas |
+| `GET /api/profile/history/{userId}` | returns only rows in `earthscan_identity` | `ProfileController` reads `SoilReports` and `AIChatHistories`, which are now written by the Land and Community services into their own schemas |
 | `POST /api/ai/chat` | works, but the prompt has no mandi/scheme context | `AiController` reads `MandiPrices` / `GovernmentSchemes`, owned by the Agri service |
 
 Both are wrapped in `try`/`catch` or plain LINQ in your original code, so nothing throws —
