@@ -94,6 +94,12 @@ namespace EarthScan.Backend.Controllers
                     ALTER TABLE Lands ADD COLUMN Longitude DOUBLE NOT NULL DEFAULT 73.8567;
                 ");
             } catch { }
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync(@"
+                    ALTER TABLE Lands ADD COLUMN CreatedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6);
+                ");
+            } catch { }
             var lands = await _context.Lands.ToListAsync();
             if (lands == null || !lands.Any())
             {
@@ -310,6 +316,7 @@ namespace EarthScan.Backend.Controllers
                 try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN BorewellSuccessProbability DOUBLE NOT NULL DEFAULT 80;"); } catch { }
                 try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN Latitude DOUBLE NOT NULL DEFAULT 18.5204;"); } catch { }
                 try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN Longitude DOUBLE NOT NULL DEFAULT 73.8567;"); } catch { }
+                try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN CreatedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6);"); } catch { }
 
                 var imagePaths = new List<string>();
                 
