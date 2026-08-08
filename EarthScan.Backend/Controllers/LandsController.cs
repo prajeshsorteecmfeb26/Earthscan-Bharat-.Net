@@ -399,27 +399,19 @@ namespace EarthScan.Backend.Controllers
                 var existingOwner = ownerId > 0 ? await _context.Users.FirstOrDefaultAsync(u => u.Id == ownerId) : null;
                 if (existingOwner == null)
                 {
-                    var defaultOwner = await _context.Users.FirstOrDefaultAsync();
-                    if (defaultOwner != null)
+                    var newOwner = new User
                     {
-                        ownerId = defaultOwner.Id;
-                    }
-                    else
-                    {
-                        var newOwner = new User
-                        {
-                            Name = "EarthScan Land Owner",
-                            Email = "owner@earthscan.in",
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Owner@123"),
-                            Role = "Land Buyer",
-                            Phone = "9876543210",
-                            Village = "Jalna",
-                            Pincode = "431203"
-                        };
-                        _context.Users.Add(newOwner);
-                        await _context.SaveChangesAsync();
-                        ownerId = newOwner.Id;
-                    }
+                        Name = "EarthScan Land Seller",
+                        Email = $"seller_{Guid.NewGuid().ToString().Substring(0, 8)}@earthscan.in",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Owner@123"),
+                        Role = "Farmer",
+                        Phone = string.IsNullOrWhiteSpace(request.ContactNumber) ? "9876543210" : request.ContactNumber,
+                        Village = "Jalna",
+                        Pincode = "431203"
+                    };
+                    _context.Users.Add(newOwner);
+                    await _context.SaveChangesAsync();
+                    ownerId = newOwner.Id;
                 }
 
                 string title = string.IsNullOrWhiteSpace(request.Title) ? "Verified Agricultural Land" : request.Title.Trim();
@@ -456,8 +448,9 @@ namespace EarthScan.Backend.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[SellLand Error] {ex.Message}");
-                return StatusCode(500, new { message = $"Failed to list land: {ex.Message}" });
+                var innerMsg = ex.InnerException?.Message ?? ex.Message;
+                Console.WriteLine($"[SellLand Error] {innerMsg}");
+                return StatusCode(500, new { message = $"Failed to list land: {innerMsg}" });
             }
         }
 
