@@ -23,7 +23,6 @@ RUN dotnet publish services/EarthScan.Agri.Service/EarthScan.Agri.Service.csproj
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-RUN mkdir -p wwwroot/uploads/diseases
 
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
