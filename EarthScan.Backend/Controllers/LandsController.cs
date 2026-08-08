@@ -300,150 +300,165 @@ namespace EarthScan.Backend.Controllers
         [HttpPost("sell")]
         public async Task<IActionResult> SellLand([FromForm] SellLandRequest request)
         {
-            if (request == null) return BadRequest("Invalid land details.");
+            if (request == null) return BadRequest(new { message = "Invalid land details." });
 
-            var imagePaths = new List<string>();
-            
-            if (!string.IsNullOrEmpty(request.SatbaraUrl))
+            try
             {
-                imagePaths.Add(request.SatbaraUrl);
-            }
+                try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN ContactNumber VARCHAR(255) NULL;"); } catch { }
+                try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN ImagePath LONGTEXT NULL;"); } catch { }
+                try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN LandIntelligenceScore DOUBLE NOT NULL DEFAULT 85;"); } catch { }
+                try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN BorewellSuccessProbability DOUBLE NOT NULL DEFAULT 80;"); } catch { }
+                try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN Latitude DOUBLE NOT NULL DEFAULT 18.5204;"); } catch { }
+                try { await _context.Database.ExecuteSqlRawAsync("ALTER TABLE Lands ADD COLUMN Longitude DOUBLE NOT NULL DEFAULT 73.8567;"); } catch { }
 
-            var allPhotos = new List<IFormFile>();
-
-            if (request.Photo != null) allPhotos.Add(request.Photo);
-            if (request.Photos != null) allPhotos.AddRange(request.Photos);
-
-            foreach (var photo in allPhotos)
-            {
-                if (photo.Length > 0)
+                var imagePaths = new List<string>();
+                
+                if (!string.IsNullOrEmpty(request.SatbaraUrl))
                 {
-                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                    var extension = Path.GetExtension(photo.FileName).ToLowerInvariant();
-                    if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
-                    {
-                        return BadRequest("Invalid photo file type. Only JPG, JPEG, PNG, and WEBP images are allowed.");
-                    }
-
-                    if (photo.Length > 5 * 1024 * 1024)
-                    {
-                        return BadRequest("Photo file size exceeds the maximum limit of 5 MB.");
-                    }
-
-                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "lands");
-                    if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = $"{Guid.NewGuid()}{extension}";
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await photo.CopyToAsync(stream);
-                    }
-                    imagePaths.Add($"/uploads/lands/{uniqueFileName}");
+                    imagePaths.Add(request.SatbaraUrl);
                 }
-            }
 
-            string finalImagePath = string.Join(",", imagePaths);
+                var allPhotos = new List<IFormFile>();
 
-            double latitude = request.Latitude;
-            double longitude = request.Longitude;
+                if (request.Photo != null) allPhotos.Add(request.Photo);
+                if (request.Photos != null) allPhotos.AddRange(request.Photos);
 
-            // Geocode location string if coordinates are not provided
-            if (latitude == 0 && longitude == 0 && !string.IsNullOrEmpty(request.Location))
-            {
-                try
+                foreach (var photo in allPhotos)
                 {
-                    using (var client = new HttpClient())
+                    if (photo.Length > 0)
                     {
-                        client.DefaultRequestHeaders.Add("User-Agent", "EarthScanApp");
-                        var response = await client.GetAsync($"https://nominatim.openstreetmap.org/search?q={Uri.EscapeDataString(request.Location)}&format=json&limit=1");
-                        if (response.IsSuccessStatusCode)
+                        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                        var extension = Path.GetExtension(photo.FileName).ToLowerInvariant();
+                        if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
                         {
-                            var content = await response.Content.ReadAsStringAsync();
-                            using (var json = JsonDocument.Parse(content))
+                            return BadRequest(new { message = "Invalid photo file type. Only JPG, JPEG, PNG, and WEBP images are allowed." });
+                        }
+
+                        if (photo.Length > 5 * 1024 * 1024)
+                        {
+                            return BadRequest(new { message = "Photo file size exceeds the maximum limit of 5 MB." });
+                        }
+
+                        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "lands");
+                        if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+                        var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await photo.CopyToAsync(stream);
+                        }
+                        imagePaths.Add($"/uploads/lands/{uniqueFileName}");
+                    }
+                }
+
+                string finalImagePath = string.Join(",", imagePaths);
+
+                double latitude = request.Latitude;
+                double longitude = request.Longitude;
+
+                // Geocode location string if coordinates are not provided
+                if (latitude == 0 && longitude == 0 && !string.IsNullOrEmpty(request.Location))
+                {
+                    try
+                    {
+                        using (var client = new HttpClient())
+                        {
+                            client.DefaultRequestHeaders.Add("User-Agent", "EarthScanApp");
+                            var response = await client.GetAsync($"https://nominatim.openstreetmap.org/search?q={Uri.EscapeDataString(request.Location)}&format=json&limit=1");
+                            if (response.IsSuccessStatusCode)
                             {
-                                if (json.RootElement.ValueKind == JsonValueKind.Array && json.RootElement.GetArrayLength() > 0)
+                                var content = await response.Content.ReadAsStringAsync();
+                                using (var json = JsonDocument.Parse(content))
                                 {
-                                    var first = json.RootElement[0];
-                                    double.TryParse(first.GetProperty("lat").GetString(), out latitude);
-                                    double.TryParse(first.GetProperty("lon").GetString(), out longitude);
+                                    if (json.RootElement.ValueKind == JsonValueKind.Array && json.RootElement.GetArrayLength() > 0)
+                                    {
+                                        var first = json.RootElement[0];
+                                        double.TryParse(first.GetProperty("lat").GetString(), out latitude);
+                                        double.TryParse(first.GetProperty("lon").GetString(), out longitude);
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Geocoding failed in backend: " + ex.Message);
-                }
-            }
-
-            // Apply default coordinate fallbacks if geocoding also returned 0
-            if (latitude == 0 && longitude == 0)
-            {
-                latitude = 18.5204;
-                longitude = 73.8567;
-            }
-
-            int ownerId = request.OwnerId;
-            var existingOwner = ownerId > 0 ? await _context.Users.FirstOrDefaultAsync(u => u.Id == ownerId) : null;
-            if (existingOwner == null)
-            {
-                var defaultOwner = await _context.Users.FirstOrDefaultAsync();
-                if (defaultOwner != null)
-                {
-                    ownerId = defaultOwner.Id;
-                }
-                else
-                {
-                    var newOwner = new User
+                    catch (Exception ex)
                     {
-                        Name = "EarthScan Land Owner",
-                        Email = "owner@earthscan.in",
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("Owner@123"),
-                        Role = "Land Buyer",
-                        Phone = "9876543210",
-                        Village = "Jalna",
-                        Pincode = "431203"
-                    };
-                    _context.Users.Add(newOwner);
-                    await _context.SaveChangesAsync();
-                    ownerId = newOwner.Id;
+                        Console.WriteLine("Geocoding failed in backend: " + ex.Message);
+                    }
                 }
+
+                // Apply default coordinate fallbacks if geocoding also returned 0
+                if (latitude == 0 && longitude == 0)
+                {
+                    latitude = 18.5204;
+                    longitude = 73.8567;
+                }
+
+                int ownerId = request.OwnerId;
+                var existingOwner = ownerId > 0 ? await _context.Users.FirstOrDefaultAsync(u => u.Id == ownerId) : null;
+                if (existingOwner == null)
+                {
+                    var defaultOwner = await _context.Users.FirstOrDefaultAsync();
+                    if (defaultOwner != null)
+                    {
+                        ownerId = defaultOwner.Id;
+                    }
+                    else
+                    {
+                        var newOwner = new User
+                        {
+                            Name = "EarthScan Land Owner",
+                            Email = "owner@earthscan.in",
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Owner@123"),
+                            Role = "Land Buyer",
+                            Phone = "9876543210",
+                            Village = "Jalna",
+                            Pincode = "431203"
+                        };
+                        _context.Users.Add(newOwner);
+                        await _context.SaveChangesAsync();
+                        ownerId = newOwner.Id;
+                    }
+                }
+
+                string title = string.IsNullOrWhiteSpace(request.Title) ? "Verified Agricultural Land" : request.Title.Trim();
+                string locationStr = string.IsNullOrWhiteSpace(request.Location) || request.Location.Trim(',').Trim() == ""
+                    ? "Jalna, Maharashtra"
+                    : request.Location.Trim(',').Trim();
+
+                decimal price = request.Price > 0 ? request.Price : 4500000;
+                double areaSize = request.AreaSize > 0 ? request.AreaSize : 2.5;
+
+                var land = new Land
+                {
+                    OwnerId = ownerId,
+                    Title = title,
+                    Description = string.IsNullOrWhiteSpace(request.Description) ? $"Verified agricultural land in {locationStr}." : request.Description,
+                    Location = locationStr,
+                    Price = price,
+                    ContactNumber = string.IsNullOrWhiteSpace(request.ContactNumber) ? "9822012345" : request.ContactNumber,
+                    SizeInAcres = areaSize,
+                    SoilType = string.IsNullOrWhiteSpace(request.SoilType) ? "Black Cotton Soil" : request.SoilType,
+                    GroundwaterLevelDepth = request.GroundwaterLevelDepth > 0 ? request.GroundwaterLevelDepth : 50,
+                    ImagePath = finalImagePath,
+                    Latitude = latitude,
+                    Longitude = longitude,
+                    LandIntelligenceScore = CalculateDynamicIntelligenceScore(request.SoilType, request.GroundwaterLevelDepth),
+                    BorewellSuccessProbability = CalculateDynamicBorewellProbability(request.SoilType, request.GroundwaterLevelDepth),
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Lands.Add(land);
+                await _context.SaveChangesAsync();
+
+                return Ok(land);
             }
-
-            string title = string.IsNullOrWhiteSpace(request.Title) ? "Verified Agricultural Land" : request.Title.Trim();
-            string locationStr = string.IsNullOrWhiteSpace(request.Location) || request.Location.Trim(',').Trim() == ""
-                ? "Jalna, Maharashtra"
-                : request.Location.Trim(',').Trim();
-
-            decimal price = request.Price > 0 ? request.Price : 4500000;
-            double areaSize = request.AreaSize > 0 ? request.AreaSize : 2.5;
-
-            var land = new Land
+            catch (Exception ex)
             {
-                OwnerId = ownerId,
-                Title = title,
-                Description = string.IsNullOrWhiteSpace(request.Description) ? $"Verified agricultural plot in {locationStr}." : request.Description,
-                Location = locationStr,
-                Price = price,
-                ContactNumber = string.IsNullOrWhiteSpace(request.ContactNumber) ? "9822012345" : request.ContactNumber,
-                SizeInAcres = areaSize,
-                SoilType = string.IsNullOrWhiteSpace(request.SoilType) ? "Black Cotton Soil" : request.SoilType,
-                GroundwaterLevelDepth = request.GroundwaterLevelDepth > 0 ? request.GroundwaterLevelDepth : 50,
-                ImagePath = finalImagePath,
-                Latitude = latitude,
-                Longitude = longitude,
-                LandIntelligenceScore = CalculateDynamicIntelligenceScore(request.SoilType, request.GroundwaterLevelDepth),
-                BorewellSuccessProbability = CalculateDynamicBorewellProbability(request.SoilType, request.GroundwaterLevelDepth),
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Lands.Add(land);
-            await _context.SaveChangesAsync();
-
-            return Ok(land);
+                Console.WriteLine($"[SellLand Error] {ex.Message}");
+                return StatusCode(500, new { message = $"Failed to list land: {ex.Message}" });
+            }
         }
 
         [HttpDelete("{id}")]
