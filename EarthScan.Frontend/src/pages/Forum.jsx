@@ -245,88 +245,92 @@ export default function Forum() {
                             </Card.Body>
                         </Card>
                     ) : (
-                        posts.map(post => (
-                            <Card key={post.id} className="glass-panel border-0 text-white mb-4">
-                                <Card.Body className="p-4">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center gap-3">
-                                            <div className="bg-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style={{ width: '45px', height: '45px', fontSize: '1.2rem' }}>
-                                                {post.authorName.charAt(0).toUpperCase()}
+                        posts.map(post => {
+                            const userRoleStr = (user?.role || user?.Role || '').toLowerCase();
+                            const isAgriExpertOrAdmin = userRoleStr.includes('expert') || userRoleStr === 'admin';
+                            const currentUserName = (user?.name || user?.Name || user?.username || user?.email || '').trim().toLowerCase();
+                            const isPostAuthor = Boolean(currentUserName && (post.authorName || '').trim().toLowerCase() === currentUserName);
+                            const canDeletePost = isAgriExpertOrAdmin || isPostAuthor;
+
+                            return (
+                                <Card key={post.id} className="glass-panel border-0 text-white mb-4">
+                                    <Card.Body className="p-4">
+                                        <div className="d-flex justify-content-between align-items-start mb-3">
+                                            <div className="d-flex align-items-center gap-3">
+                                                <div className="bg-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style={{ width: '45px', height: '45px', fontSize: '1.2rem' }}>
+                                                    {post.authorName.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <h6 className="mb-0 fw-bold">{post.authorName}</h6>
+                                                    <small className="text-secondary">
+                                                        <Badge bg={getRoleBadgeColor(post.authorRole)} className="me-2">{post.authorRole}</Badge>
+                                                        {formatDate(post.createdAt)}
+                                                    </small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h6 className="mb-0 fw-bold">{post.authorName}</h6>
-                                                <small className="text-secondary">
-                                                    <Badge bg={getRoleBadgeColor(post.authorRole)} className="me-2">{post.authorRole}</Badge>
-                                                    {formatDate(post.createdAt)}
-                                                </small>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <Badge bg={getCategoryBadgeColor(post.category)}>{post.category}</Badge>
+                                                {canDeletePost && (
+                                                    <Button 
+                                                        variant="outline-danger" 
+                                                        size="sm" 
+                                                        className="border-0 p-1 lh-1 rounded-circle ms-1"
+                                                        title="Delete Post"
+                                                        onClick={() => handleDeletePost(post.id)}
+                                                    >
+                                                        <i className="bi bi-trash-fill text-danger fs-6"></i>
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className="d-flex align-items-center gap-2">
-                                            <Badge bg={getCategoryBadgeColor(post.category)}>{post.category}</Badge>
-                                            {(user?.role === 'Admin' || user?.role === 'admin' || user?.name === post.authorName) && (
-                                                <Button 
-                                                    variant="outline-danger" 
-                                                    size="sm" 
-                                                    className="border-0 p-1 lh-1 rounded-circle ms-1"
-                                                    title="Delete Post"
-                                                    onClick={() => handleDeletePost(post.id)}
-                                                >
-                                                    <i className="bi bi-trash-fill text-danger fs-6"></i>
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    
-                                    <h5 className="fw-bold mb-2">{post.title}</h5>
-                                    <p className="text-light mb-4" style={{ whiteSpace: 'pre-wrap' }}>{post.content}</p>
-
-                                    <hr className="border-secondary opacity-25" />
-
-                                    {/* Comments Section */}
-                                    <div className="mt-3">
-                                        <h6 className="fw-bold text-secondary mb-3">
-                                            <i className="bi bi-chat-left-text-fill me-2"></i> 
-                                            {post.comments?.length || 0} Comments
-                                        </h6>
                                         
-                                        {post.comments?.map(comment => {
-                                            const userRoleStr = (user?.role || user?.Role || '').toLowerCase();
-                                            const isAgriExpertOrAdmin = userRoleStr.includes('expert') || userRoleStr === 'admin';
-                                            const isFarmerOrLandBuyer = userRoleStr.includes('farmer') || userRoleStr.includes('buyer') || userRoleStr.includes('land');
-                                            const isCommentAuthor = user && (comment.authorName === (user.name || user.Name || user.username || user.email));
-                                            const canEditComment = isAgriExpertOrAdmin || isFarmerOrLandBuyer || isCommentAuthor || !!user;
-                                            const canDeleteComment = isAgriExpertOrAdmin || isFarmerOrLandBuyer || isCommentAuthor || !!user;
+                                        <h5 className="fw-bold mb-2">{post.title}</h5>
+                                        <p className="text-light mb-4" style={{ whiteSpace: 'pre-wrap' }}>{post.content}</p>
 
-                                            return (
-                                                <div key={comment.id} className="mb-3 p-3 rounded position-relative" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                                    <div className="d-flex justify-content-between align-items-center mb-1">
-                                                        <span className="fw-bold small">
-                                                            {comment.authorName} <Badge bg={getRoleBadgeColor(comment.authorRole)} className="ms-1" style={{ fontSize: '0.6rem' }}>{comment.authorRole}</Badge>
-                                                        </span>
-                                                        <div className="d-flex align-items-center gap-2">
-                                                            <span className="text-secondary small" style={{ fontSize: '0.75rem' }}>{formatDate(comment.createdAt)}</span>
-                                                            {canEditComment && editingCommentId !== comment.id && (
-                                                                <Button 
-                                                                    variant="link" 
-                                                                    className="p-0 text-secondary hover-white text-decoration-none" 
-                                                                    title="Edit Comment"
-                                                                    onClick={() => handleStartEditComment(comment)}
-                                                                >
-                                                                    <i className="bi bi-pencil-square" style={{ fontSize: '0.85rem' }}></i>
-                                                                </Button>
-                                                            )}
-                                                            {canDeleteComment && (
-                                                                <Button 
-                                                                    variant="link" 
-                                                                    className="p-0 text-danger opacity-75 hover-opacity-100 text-decoration-none" 
-                                                                    title="Delete Comment"
-                                                                    onClick={() => handleDeleteComment(post.id, comment.id)}
-                                                                >
-                                                                    <i className="bi bi-trash-fill" style={{ fontSize: '0.85rem' }}></i>
-                                                                </Button>
-                                                            )}
+                                        <hr className="border-secondary opacity-25" />
+
+                                        {/* Comments Section */}
+                                        <div className="mt-3">
+                                            <h6 className="fw-bold text-secondary mb-3">
+                                                <i className="bi bi-chat-left-text-fill me-2"></i> 
+                                                {post.comments?.length || 0} Comments
+                                            </h6>
+                                            
+                                            {post.comments?.map(comment => {
+                                                const isCommentAuthor = Boolean(currentUserName && (comment.authorName || '').trim().toLowerCase() === currentUserName);
+                                                const canEditComment = isAgriExpertOrAdmin || isCommentAuthor;
+                                                const canDeleteComment = isAgriExpertOrAdmin || isCommentAuthor;
+
+                                                return (
+                                                    <div key={comment.id} className="mb-3 p-3 rounded position-relative" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                                        <div className="d-flex justify-content-between align-items-center mb-1">
+                                                            <span className="fw-bold small">
+                                                                {comment.authorName} <Badge bg={getRoleBadgeColor(comment.authorRole)} className="ms-1" style={{ fontSize: '0.6rem' }}>{comment.authorRole}</Badge>
+                                                            </span>
+                                                            <div className="d-flex align-items-center gap-2">
+                                                                <span className="text-secondary small" style={{ fontSize: '0.75rem' }}>{formatDate(comment.createdAt)}</span>
+                                                                {canEditComment && editingCommentId !== comment.id && (
+                                                                    <Button 
+                                                                        variant="link" 
+                                                                        className="p-0 text-secondary hover-white text-decoration-none" 
+                                                                        title="Edit Comment"
+                                                                        onClick={() => handleStartEditComment(comment)}
+                                                                    >
+                                                                        <i className="bi bi-pencil-square" style={{ fontSize: '0.85rem' }}></i>
+                                                                    </Button>
+                                                                )}
+                                                                {canDeleteComment && (
+                                                                    <Button 
+                                                                        variant="link" 
+                                                                        className="p-0 text-danger opacity-75 hover-opacity-100 text-decoration-none" 
+                                                                        title="Delete Comment"
+                                                                        onClick={() => handleDeleteComment(post.id, comment.id)}
+                                                                    >
+                                                                        <i className="bi bi-trash-fill" style={{ fontSize: '0.85rem' }}></i>
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
 
                                                     {editingCommentId === comment.id ? (
                                                         <div className="mt-2">

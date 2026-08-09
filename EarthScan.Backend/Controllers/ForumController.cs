@@ -142,6 +142,71 @@ namespace EarthScan.Backend.Controllers
             return Ok(new { message = "Post created successfully", post = responsePost });
         }
 
+        // DELETE: api/forum/posts/5
+        [HttpDelete("posts/{id}")]
+        public async Task<IActionResult> DeletePost(int id)
+        {
+            var post = await _context.ForumPosts.Include(p => p.Comments).FirstOrDefaultAsync(p => p.Id == id);
+            if (post == null)
+            {
+                return NotFound(new { message = "Post not found" });
+            }
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                           ?? User.FindFirstValue("sub") 
+                           ?? User.FindFirstValue("nameid");
+
+            User? currentUser = null;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId))
+            {
+                currentUser = await _context.Users.FindAsync(userId);
+            }
+
+            if (currentUser == null)
+            {
+                var emailClaim = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+                if (!string.IsNullOrEmpty(emailClaim))
+                {
+                    currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == emailClaim);
+                }
+            }
+
+            var userName = currentUser?.Name 
+                        ?? User.FindFirstValue(ClaimTypes.Name) 
+                        ?? User.FindFirstValue("unique_name") 
+                        ?? User.FindFirstValue("name") 
+                        ?? User.Identity?.Name;
+
+            var userRole = currentUser?.Role 
+                        ?? User.FindFirstValue(ClaimTypes.Role) 
+                        ?? User.FindFirstValue("role") 
+                        ?? User.Claims.FirstOrDefault(c => c.Type.EndsWith("role", StringComparison.OrdinalIgnoreCase))?.Value
+                        ?? "Farmer";
+
+            bool isExpertOrAdmin = string.Equals(userRole, "Agriculture Expert", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase)
+                                || userRole.ToLower().Contains("expert")
+                                || User.IsInRole("Agriculture Expert")
+                                || User.IsInRole("Admin");
+
+            bool isPostAuthor = !string.IsNullOrEmpty(userName) && string.Equals(post.AuthorName, userName, StringComparison.OrdinalIgnoreCase);
+
+            if (!isExpertOrAdmin && !isPostAuthor)
+            {
+                return StatusCode(403, new { message = "You can only delete your own posts." });
+            }
+
+            if (post.Comments != null && post.Comments.Any())
+            {
+                _context.ForumComments.RemoveRange(post.Comments);
+            }
+
+            _context.ForumPosts.Remove(post);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Post deleted successfully" });
+        }
+
         // POST: api/forum/posts/5/comments
         [HttpPost("posts/{postId}/comments")]
         public async Task<IActionResult> AddComment(int postId, [FromBody] CreateCommentRequest request)
@@ -264,10 +329,9 @@ namespace EarthScan.Backend.Controllers
 
             bool isAuthor = !string.IsNullOrEmpty(userName) && string.Equals(comment.AuthorName, userName, StringComparison.OrdinalIgnoreCase);
 
-            // Agriculture Expert, Admin, Comment Author, or Authenticated user can edit comment
-            if (!isExpertOrAdmin && !isAuthor && !(User.Identity?.IsAuthenticated == true))
+            if (!isExpertOrAdmin && !isAuthor)
             {
-                return StatusCode(403, new { message = "You do not have permission to edit this comment." });
+                return StatusCode(403, new { message = "You can only edit your own comments." });
             }
 
             comment.Content = request.Content;
@@ -325,15 +389,9 @@ namespace EarthScan.Backend.Controllers
 
             bool isAuthor = !string.IsNullOrEmpty(userName) && string.Equals(comment.AuthorName, userName, StringComparison.OrdinalIgnoreCase);
 
-            bool isAllowed = isExpertOrAdmin 
-                          || isAuthor 
-                          || string.Equals(userRole, "Farmer", StringComparison.OrdinalIgnoreCase) 
-                          || string.Equals(userRole, "Land Buyer", StringComparison.OrdinalIgnoreCase) 
-                          || (User.Identity?.IsAuthenticated == true);
-
-            if (!isAllowed)
+            if (!isExpertOrAdmin && !isAuthor)
             {
-                return StatusCode(403, new { message = "You do not have permission to delete this comment." });
+                return StatusCode(403, new { message = "You can only delete your own comments." });
             }
 
             _context.ForumComments.Remove(comment);
