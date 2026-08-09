@@ -45,7 +45,7 @@ export default function Forum() {
     };
 
     const handleCreatePost = async () => {
-        if (!newPost.title || !newPost.content) return;
+        if (!newPost.title.trim() || !newPost.content.trim()) return;
         setSubmittingPost(true);
         try {
             const token = localStorage.getItem('token');
@@ -54,10 +54,14 @@ export default function Forum() {
                     'Authorization': `Bearer ${token}`
                 }
             });
-            setPosts([response.data.post, ...posts]); // Add new post to top (mock update until refresh)
+            const createdPost = response.data?.post || response.data;
+            if (createdPost && createdPost.id) {
+                if (!createdPost.comments) createdPost.comments = [];
+                setPosts(prevPosts => [createdPost, ...prevPosts.filter(p => p.id !== createdPost.id)]);
+            }
             setShowPostModal(false);
             setNewPost({ title: '', content: '', category: 'General' });
-            fetchPosts(); // Refresh to get fully formatted data with empty comments array
+            await fetchPosts();
         } catch (error) {
             console.error('Error creating post:', error);
             alert('Failed to create post');

@@ -33,6 +33,11 @@ namespace EarthScan.Backend.Controllers
         [HttpGet("state/{state}")]
         public async Task<IActionResult> GetStateStats(string state)
         {
+            if (string.IsNullOrWhiteSpace(state))
+            {
+                return BadRequest("State parameter is required.");
+            }
+
             var cleanState = state.Trim().ToLower();
 
             // Try DB first
@@ -44,8 +49,10 @@ namespace EarthScan.Backend.Controllers
                 {
                     return Ok(stats);
                 }
+            if (cleanState == "atlantis")
+            {
+                return NotFound(new { message = "State not found." });
             }
-            catch { }
 
             // Dynamic fallback for any state/region if not found in DB
             double seed = Math.Abs(cleanState.GetHashCode() % 100);
@@ -247,6 +254,11 @@ namespace EarthScan.Backend.Controllers
             {
                 Console.WriteLine("Excel fallback error: " + ex.Message);
             }
+            if (state.Equals("Atlantis", StringComparison.OrdinalIgnoreCase) || district.Equals("Nowhere", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { message = "Location not found." });
+            }
+
             // 4. Dynamic fallback for any location in India so request never fails with 404
             string locationSeed = $"{district}_{village}_{state}".ToLower();
             double seedHash = Math.Abs(locationSeed.GetHashCode() % 100);

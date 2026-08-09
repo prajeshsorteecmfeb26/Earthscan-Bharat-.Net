@@ -33,16 +33,8 @@ namespace EarthScan.Backend.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            // Retrieve list of active user names and emails
-            var activeUserNames = await _context.Users
-                .Select(u => u.Name)
-                .Union(_context.Users.Select(u => u.Email))
-                .Where(n => !string.IsNullOrEmpty(n))
-                .Distinct()
-                .ToListAsync();
-
             var posts = await _context.ForumPosts
-                .Where(p => activeUserNames.Contains(p.AuthorName) && p.Title != "ff" && p.Title != "I want my wage" && p.Content != "f" && p.Content != "wage")
+                .Where(p => p.Title != "ff" && p.Title != "I want my wage" && p.Content != "f" && p.Content != "wage")
                 .Include(p => p.Comments)
                 .OrderByDescending(p => p.CreatedAt)
                 .Select(p => new
@@ -55,7 +47,6 @@ namespace EarthScan.Backend.Controllers
                     p.Category,
                     p.CreatedAt,
                     Comments = p.Comments
-                        .Where(c => activeUserNames.Contains(c.AuthorName))
                         .OrderBy(c => c.CreatedAt)
                         .Select(c => new
                         {
@@ -92,14 +83,42 @@ namespace EarthScan.Backend.Controllers
         [HttpPost("posts")]
         public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
         {
-            var userName = User.FindFirstValue(ClaimTypes.Name) ?? "Unknown";
-            var userRole = User.FindFirstValue(ClaimTypes.Role) ?? "User";
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                           ?? User.FindFirstValue("sub") 
+                           ?? User.FindFirstValue("nameid");
+
+            User? currentUser = null;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId))
+            {
+                currentUser = await _context.Users.FindAsync(userId);
+            }
+
+            if (currentUser == null)
+            {
+                var emailClaim = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+                if (!string.IsNullOrEmpty(emailClaim))
+                {
+                    currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == emailClaim);
+                }
+            }
+
+            var userName = currentUser?.Name 
+                        ?? User.FindFirstValue(ClaimTypes.Name) 
+                        ?? User.FindFirstValue("unique_name") 
+                        ?? User.FindFirstValue("name") 
+                        ?? User.Identity?.Name 
+                        ?? "Farmer User";
+
+            var userRole = currentUser?.Role 
+                        ?? User.FindFirstValue(ClaimTypes.Role) 
+                        ?? User.FindFirstValue("role") 
+                        ?? "Farmer";
 
             var post = new ForumPost
             {
                 Title = request.Title,
                 Content = request.Content,
-                Category = request.Category,
+                Category = string.IsNullOrWhiteSpace(request.Category) ? "General" : request.Category,
                 AuthorName = userName,
                 AuthorRole = userRole,
                 CreatedAt = DateTime.UtcNow
@@ -108,7 +127,19 @@ namespace EarthScan.Backend.Controllers
             _context.ForumPosts.Add(post);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Post created successfully", post });
+            var responsePost = new
+            {
+                post.Id,
+                post.Title,
+                post.Content,
+                post.AuthorName,
+                post.AuthorRole,
+                post.Category,
+                post.CreatedAt,
+                Comments = Array.Empty<object>()
+            };
+
+            return Ok(new { message = "Post created successfully", post = responsePost });
         }
 
         // POST: api/forum/posts/5/comments
@@ -121,8 +152,36 @@ namespace EarthScan.Backend.Controllers
                 return NotFound(new { message = "Post not found" });
             }
 
-            var userName = User.FindFirstValue(ClaimTypes.Name) ?? "Unknown";
-            var userRole = User.FindFirstValue(ClaimTypes.Role) ?? "User";
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                           ?? User.FindFirstValue("sub") 
+                           ?? User.FindFirstValue("nameid");
+
+            User? currentUser = null;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId))
+            {
+                currentUser = await _context.Users.FindAsync(userId);
+            }
+
+            if (currentUser == null)
+            {
+                var emailClaim = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+                if (!string.IsNullOrEmpty(emailClaim))
+                {
+                    currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == emailClaim);
+                }
+            }
+
+            var userName = currentUser?.Name 
+                        ?? User.FindFirstValue(ClaimTypes.Name) 
+                        ?? User.FindFirstValue("unique_name") 
+                        ?? User.FindFirstValue("name") 
+                        ?? User.Identity?.Name 
+                        ?? "Farmer User";
+
+            var userRole = currentUser?.Role 
+                        ?? User.FindFirstValue(ClaimTypes.Role) 
+                        ?? User.FindFirstValue("role") 
+                        ?? "Farmer";
 
             var comment = new ForumComment
             {
