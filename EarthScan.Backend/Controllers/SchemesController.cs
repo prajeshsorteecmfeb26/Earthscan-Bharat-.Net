@@ -31,7 +31,7 @@ namespace EarthScan.Backend.Controllers
                 var dbSchemes = await _context.GovernmentSchemes.ToListAsync();
                 if (dbSchemes != null && dbSchemes.Any())
                 {
-                    return Ok(dbSchemes);
+                    return dbSchemes;
                 }
             }
             catch { }
@@ -58,40 +58,10 @@ namespace EarthScan.Backend.Controllers
                     Eligibility = "All farmers growing notified Kharif & Rabi crops in notified districts.",
                     ApplicationLink = "https://pmfby.gov.in",
                     Status = "Active"
-                },
-                new GovernmentScheme
-                {
-                    Id = 3,
-                    Name = "Kisan Credit Card (KCC) Scheme",
-                    Description = "Low-interest institutional credit up to ₹3 Lakhs for farmers to purchase seeds, fertilizers, pesticides, and machinery without collateral up to ₹1.6 Lakh.",
-                    Benefit = "Subsidized 4% Loan Rate & Collateral-Free Credit",
-                    Eligibility = "Farmers, Tenant Farmers, Sharecroppers & SHGs with valid land or lease proof.",
-                    ApplicationLink = "https://pmkisan.gov.in/KCC.aspx",
-                    Status = "Active"
-                },
-                new GovernmentScheme
-                {
-                    Id = 4,
-                    Name = "PMKSY (Pradhan Mantri Krishi Sinchayee Yojana)",
-                    Description = "Per Drop More Crop scheme offering micro-irrigation subsidies for Drip and Sprinkler systems to optimize water use efficiency.",
-                    Benefit = "45% to 55% Micro-Irrigation Subsidy",
-                    Eligibility = "All farmers with accessible agricultural land and irrigation water source.",
-                    ApplicationLink = "https://pmksy.gov.in",
-                    Status = "Active"
-                },
-                new GovernmentScheme
-                {
-                    Id = 5,
-                    Name = "Soil Health Card Scheme",
-                    Description = "Provides detailed soil nutrient analysis and customized fertilizer recommendations every 2 years to improve soil health & yield.",
-                    Benefit = "Free Soil Testing & Custom Fertilizer Advisory",
-                    Eligibility = "All agricultural land owners across India.",
-                    ApplicationLink = "https://soilhealth.dac.gov.in",
-                    Status = "Active"
                 }
             };
 
-            return Ok(defaultSchemes);
+            return defaultSchemes;
         }
 
         // POST: api/schemes/register

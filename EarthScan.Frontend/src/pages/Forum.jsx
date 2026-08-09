@@ -111,7 +111,7 @@ export default function Forum() {
             setActiveCommentPostId(null);
         } catch (error) {
             console.error('Error adding comment:', error);
-            alert('Failed to add comment');
+            alert(error.response?.data?.message || error.message || 'Failed to add comment');
         } finally {
             setSubmittingComment(false);
         }
@@ -236,7 +236,7 @@ export default function Forum() {
                                             </div>
                                         ))}
 
-                                        {(user?.role === 'Agriculture Expert' || user?.Role === 'Agriculture Expert') ? (
+                                        {( (user?.role || user?.Role || '').toLowerCase().includes('expert') || (user?.role || user?.Role || '').toLowerCase() === 'admin' ) ? (
                                             activeCommentPostId === post.id ? (
                                                 <div className="mt-3">
                                                     <Form.Control 

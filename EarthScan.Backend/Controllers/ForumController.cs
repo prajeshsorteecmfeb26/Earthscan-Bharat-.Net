@@ -181,9 +181,16 @@ namespace EarthScan.Backend.Controllers
             var userRole = currentUser?.Role 
                         ?? User.FindFirstValue(ClaimTypes.Role) 
                         ?? User.FindFirstValue("role") 
+                        ?? User.Claims.FirstOrDefault(c => c.Type.EndsWith("role", StringComparison.OrdinalIgnoreCase))?.Value
                         ?? "Farmer";
 
-            if (!string.Equals(userRole, "Agriculture Expert", StringComparison.OrdinalIgnoreCase))
+            bool isAllowedToComment = string.Equals(userRole, "Agriculture Expert", StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase)
+                                   || userRole.ToLower().Contains("expert")
+                                   || User.IsInRole("Agriculture Expert")
+                                   || User.IsInRole("Admin");
+
+            if (!isAllowedToComment)
             {
                 return StatusCode(403, new { message = "Only Agriculture Experts are allowed to add comments or replies to forum posts." });
             }

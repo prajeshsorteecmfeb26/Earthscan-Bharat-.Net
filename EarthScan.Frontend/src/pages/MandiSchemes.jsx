@@ -16,10 +16,13 @@ export default function MandiSchemes() {
     const [loadingPrices, setLoadingPrices] = useState(true);
 
     // Schemes state
+    const userKey = user?.id || user?.Id || user?.email || user?.Email || 'guest';
+    const storageKey = `farmer_scheme_registrations_${userKey}`;
+
     const [schemes, setSchemes] = useState([]);
     const [loadingSchemes, setLoadingSchemes] = useState(false);
     const [registrations, setRegistrations] = useState(() => {
-        const saved = localStorage.getItem('farmer_scheme_registrations');
+        const saved = localStorage.getItem(storageKey);
         return saved ? JSON.parse(saved) : [];
     });
 
@@ -63,18 +66,19 @@ export default function MandiSchemes() {
         return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
 
-    // Fetch Schemes
+    // Fetch Schemes & Registrations when user or component loads
     useEffect(() => {
         fetchSchemes();
         fetchUserRegistrations();
-    }, []);
+    }, [userKey]);
 
     const fetchSchemes = async () => {
         setLoadingSchemes(true);
         try {
             const response = await axios.get(`${API_BASE_URL}/api/schemes`);
             if (response.data && response.data.length > 0) {
-                setSchemes(response.data);
+                // Ensure only top 2 schemes are kept
+                setSchemes(response.data.slice(0, 2));
             } else {
                 setSchemes(getDefaultSchemes());
             }
@@ -93,15 +97,18 @@ export default function MandiSchemes() {
                 const response = await axios.get(`${API_BASE_URL}/api/schemes/my-registrations`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (response.data && response.data.length > 0) {
+                if (response.data && Array.isArray(response.data)) {
                     const fetchedIds = response.data.map(r => r.schemeId);
                     setRegistrations(fetchedIds);
-                    localStorage.setItem('farmer_scheme_registrations', JSON.stringify(fetchedIds));
+                    localStorage.setItem(storageKey, JSON.stringify(fetchedIds));
+                    return;
                 }
             }
         } catch (err) {
             console.warn("Could not fetch remote registrations:", err);
         }
+        const saved = localStorage.getItem(storageKey);
+        setRegistrations(saved ? JSON.parse(saved) : []);
     };
 
     const getDefaultSchemes = () => [
@@ -122,33 +129,6 @@ export default function MandiSchemes() {
             eligibility: "All farmers growing notified Kharif & Rabi crops in notified areas.",
             applicationLink: "https://pmfby.gov.in",
             category: "Crop Insurance"
-        },
-        {
-            id: 3,
-            name: "Kisan Credit Card (KCC) Scheme",
-            description: "Subsidized institutional credit up to ₹3 Lakhs for farmers to purchase seeds, fertilizers, pesticides, and equipment without collateral up to ₹1.6 Lakh.",
-            benefit: "Subsidized 4% Interest Credit & Collateral-Free Loans",
-            eligibility: "Farmers, Tenant Farmers, Sharecroppers & SHGs with valid land or lease proof.",
-            applicationLink: "https://pmkisan.gov.in/KCC.aspx",
-            category: "Credit & Subsidies"
-        },
-        {
-            id: 4,
-            name: "PMKSY (Pradhan Mantri Krishi Sinchayee Yojana)",
-            description: "Per Drop More Crop scheme offering micro-irrigation subsidies for Drip and Sprinkler irrigation systems to maximize crop yield per drop of water.",
-            benefit: "45% to 55% Micro-Irrigation Subsidy",
-            eligibility: "All farmers with accessible agricultural land and water source.",
-            applicationLink: "https://pmksy.gov.in",
-            category: "Irrigation Subsidy"
-        },
-        {
-            id: 5,
-            name: "Soil Health Card Scheme",
-            description: "Provides detailed soil nutrient status and customized fertilizer recommendations every 2 years to optimize soil fertility & crop productivity.",
-            benefit: "Free Soil Testing & Custom Nutrient Advisory",
-            eligibility: "All agricultural land owners across India.",
-            applicationLink: "https://soilhealth.dac.gov.in",
-            category: "Soil Advisory"
         }
     ];
 
@@ -195,7 +175,7 @@ export default function MandiSchemes() {
         } finally {
             const updatedRegs = Array.from(new Set([...registrations, schemeId]));
             setRegistrations(updatedRegs);
-            localStorage.setItem('farmer_scheme_registrations', JSON.stringify(updatedRegs));
+            localStorage.setItem(storageKey, JSON.stringify(updatedRegs));
 
             setRegSuccessInfo({
                 schemeName: selectedScheme.name,
