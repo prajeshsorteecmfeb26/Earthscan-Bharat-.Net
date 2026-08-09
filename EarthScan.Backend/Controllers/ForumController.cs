@@ -62,23 +62,6 @@ namespace EarthScan.Backend.Controllers
             return Ok(posts);
         }
 
-        // DELETE: api/forum/posts/5
-        [HttpDelete("posts/{id}")]
-        public async Task<IActionResult> DeletePost(int id)
-        {
-            var post = await _context.ForumPosts.Include(p => p.Comments).FirstOrDefaultAsync(p => p.Id == id);
-            if (post == null)
-            {
-                return NotFound(new { message = "Post not found" });
-            }
-
-            _context.ForumComments.RemoveRange(post.Comments);
-            _context.ForumPosts.Remove(post);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Post deleted successfully" });
-        }
-
         // POST: api/forum/posts
         [HttpPost("posts")]
         public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
