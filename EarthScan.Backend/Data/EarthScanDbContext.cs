@@ -18,6 +18,7 @@ namespace EarthScan.Backend.Data
         public DbSet<SoilReport> SoilReports { get; set; }
         public DbSet<AIChatHistory> AIChatHistories { get; set; }
         public DbSet<GovernmentScheme> GovernmentSchemes { get; set; }
+        public DbSet<SchemeRegistration> SchemeRegistrations { get; set; }
         public DbSet<UserSearchHistory> UserSearchHistories { get; set; }
         public DbSet<SatbaraRegistry> SatbaraRegistries { get; set; }
         

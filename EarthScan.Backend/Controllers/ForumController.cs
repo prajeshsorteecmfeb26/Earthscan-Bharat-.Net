@@ -183,6 +183,11 @@ namespace EarthScan.Backend.Controllers
                         ?? User.FindFirstValue("role") 
                         ?? "Farmer";
 
+            if (!string.Equals(userRole, "Agriculture Expert", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403, new { message = "Only Agriculture Experts are allowed to add comments or replies to forum posts." });
+            }
+
             var comment = new ForumComment
             {
                 ForumPostId = postId,

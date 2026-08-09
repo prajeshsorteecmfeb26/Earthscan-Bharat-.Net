@@ -14,12 +14,12 @@ namespace EarthScan.CommunityService.Tests
     /// <summary>Unit tests for the community forum endpoints.</summary>
     public class ForumControllerTests
     {
-        private static ForumController BuildController(EarthScan.Backend.Data.EarthScanDbContext context)
+        private static ForumController BuildController(EarthScan.Backend.Data.EarthScanDbContext context, string role = "Farmer", string name = "Farmer User")
         {
             var identity = new ClaimsIdentity(new[]
             {
-                new Claim(ClaimTypes.Name, "Farmer User"),
-                new Claim(ClaimTypes.Role, "Farmer")
+                new Claim(ClaimTypes.Name, name),
+                new Claim(ClaimTypes.Role, role)
             }, "TestAuth");
 
             return new ForumController(context)
@@ -130,7 +130,7 @@ namespace EarthScan.CommunityService.Tests
             context.ForumPosts.Add(post);
             await context.SaveChangesAsync();
 
-            var controller = BuildController(context);
+            var controller = BuildController(context, role: "Agriculture Expert");
 
             var result = await controller.AddComment(post.Id, new CreateCommentRequest { Content = "Try drip irrigation" });
 
@@ -140,6 +140,22 @@ namespace EarthScan.CommunityService.Tests
             Assert.Equal(post.Id, comment.ForumPostId);
             Assert.Equal("Try drip irrigation", comment.Content);
             Assert.Equal("Farmer User", comment.AuthorName);
+        }
+
+        [Fact]
+        public async Task AddComment_ReturnsForbidden_WhenUserIsNotAgricultureExpert()
+        {
+            using var context = TestSupport.CreateContext();
+            var post = new ForumPost { Title = "Q", Content = "B", AuthorName = "A", AuthorRole = "Farmer", Category = "General" };
+            context.ForumPosts.Add(post);
+            await context.SaveChangesAsync();
+
+            var controller = BuildController(context, role: "Farmer");
+
+            var result = await controller.AddComment(post.Id, new CreateCommentRequest { Content = "Not allowed" });
+
+            var forbidden = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(403, forbidden.StatusCode);
         }
     }
 }

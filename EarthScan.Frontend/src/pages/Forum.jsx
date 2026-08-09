@@ -236,27 +236,34 @@ export default function Forum() {
                                             </div>
                                         ))}
 
-                                        {activeCommentPostId === post.id ? (
-                                            <div className="mt-3">
-                                                <Form.Control 
-                                                    as="textarea" 
-                                                    rows={2} 
-                                                    placeholder="Write a reply..." 
-                                                    value={commentContent}
-                                                    onChange={(e) => setCommentContent(e.target.value)}
-                                                    className="bg-transparent text-white border-secondary shadow-none mb-2"
-                                                />
-                                                <div className="d-flex justify-content-end gap-2">
-                                                    <Button variant="outline-secondary" size="sm" onClick={() => {setActiveCommentPostId(null); setCommentContent('');}}>Cancel</Button>
-                                                    <Button variant="primary" size="sm" onClick={() => handleAddComment(post.id)} disabled={submittingComment || !commentContent.trim()}>
-                                                        {submittingComment ? 'Posting...' : 'Reply'}
-                                                    </Button>
+                                        {(user?.role === 'Agriculture Expert' || user?.Role === 'Agriculture Expert') ? (
+                                            activeCommentPostId === post.id ? (
+                                                <div className="mt-3">
+                                                    <Form.Control 
+                                                        as="textarea" 
+                                                        rows={2} 
+                                                        placeholder="Write an expert response or advice..." 
+                                                        value={commentContent}
+                                                        onChange={(e) => setCommentContent(e.target.value)}
+                                                        className="bg-transparent text-white border-secondary shadow-none mb-2"
+                                                    />
+                                                    <div className="d-flex justify-content-end gap-2">
+                                                        <Button variant="outline-secondary" size="sm" onClick={() => {setActiveCommentPostId(null); setCommentContent('');}}>Cancel</Button>
+                                                        <Button variant="primary" size="sm" onClick={() => handleAddComment(post.id)} disabled={submittingComment || !commentContent.trim()}>
+                                                            {submittingComment ? 'Posting...' : 'Reply'}
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            ) : (
+                                                <Button variant="outline-light" size="sm" className="rounded-pill border-secondary text-secondary hover-white mt-2" onClick={() => setActiveCommentPostId(post.id)}>
+                                                    <i className="bi bi-reply-fill me-1"></i> Expert Reply
+                                                </Button>
+                                            )
                                         ) : (
-                                            <Button variant="outline-light" size="sm" className="rounded-pill border-secondary text-secondary hover-white mt-2" onClick={() => setActiveCommentPostId(post.id)}>
-                                                <i className="bi bi-reply-fill"></i> Add a Comment
-                                            </Button>
+                                            <div className="mt-2 text-secondary small p-2 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-25 d-inline-flex align-items-center gap-2">
+                                                <i className="bi bi-shield-lock-fill text-warning"></i>
+                                                <span>Only <strong>Agriculture Experts</strong> can comment or reply to discussions.</span>
+                                            </div>
                                         )}
                                     </div>
                                 </Card.Body>
