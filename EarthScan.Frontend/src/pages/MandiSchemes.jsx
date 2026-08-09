@@ -220,11 +220,6 @@ export default function MandiSchemes() {
                 <h2 className="text-white fw-bold mb-0 d-flex align-items-center gap-2">
                     <i className="bi bi-shop text-warning"></i> Mandi Prices & Government Schemes
                 </h2>
-                {registrations.length > 0 && (
-                    <Badge bg="success" className="fs-6 px-3 py-2 rounded-pill shadow-sm">
-                        <i className="bi bi-check-circle-fill me-1"></i> {registrations.length} Scheme(s) Enrolled
-                    </Badge>
-                )}
             </div>
 
             <Card className="glass-panel border-0 text-white shadow-lg mb-4">
@@ -240,7 +235,7 @@ export default function MandiSchemes() {
                         />
                         <Tab 
                             eventKey="schemes" 
-                            title={<span><i className="bi bi-award-fill text-success me-2"></i>Government Schemes & Registration</span>} 
+                            title={<span><i className="bi bi-award-fill text-success me-2"></i>Government Schemes</span>} 
                         />
                     </Tabs>
                 </Card.Header>
@@ -326,7 +321,7 @@ export default function MandiSchemes() {
                             <div className="d-flex justify-content-between align-items-center mb-3">
                                 <div>
                                     <h4 className="fw-bold text-white mb-1">Central & State Farmer Welfare Schemes</h4>
-                                    <p className="text-secondary small mb-0">Direct income support, crop insurance & subsidy enrollment for registered farmer accounts.</p>
+                                    <p className="text-secondary small mb-0">Official government schemes for income support, crop insurance & agricultural welfare.</p>
                                 </div>
                             </div>
 
@@ -338,7 +333,6 @@ export default function MandiSchemes() {
                             ) : (
                                 <Row className="g-4">
                                     {schemes.map(scheme => {
-                                        const enrolled = isEnrolled(scheme.id);
                                         return (
                                             <Col lg={6} key={scheme.id}>
                                                 <Card className="h-100 border border-secondary border-opacity-25 bg-dark bg-opacity-50 text-white shadow-sm hover-card">
@@ -348,15 +342,6 @@ export default function MandiSchemes() {
                                                                 <Badge bg="primary" className="px-3 py-1 rounded-pill text-uppercase">
                                                                     {scheme.category || "Government Scheme"}
                                                                 </Badge>
-                                                                {enrolled ? (
-                                                                    <Badge bg="success" className="px-3 py-1 rounded-pill">
-                                                                        <i className="bi bi-check-circle-fill me-1"></i> Enrolled
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge bg="warning" text="dark" className="px-3 py-1 rounded-pill">
-                                                                        Open for Application
-                                                                    </Badge>
-                                                                )}
                                                             </div>
                                                             <h5 className="fw-bold text-white mb-2">{scheme.name}</h5>
                                                             <p className="text-light small mb-3">{scheme.description}</p>
@@ -372,34 +357,19 @@ export default function MandiSchemes() {
                                                             </div>
                                                         </div>
 
-                                                        <div className="d-flex gap-2 mt-2">
-                                                            {enrolled ? (
-                                                                <Button variant="outline-success" className="w-100 rounded-pill fw-bold" disabled>
-                                                                    <i className="bi bi-check-circle-fill me-1"></i> Application Submitted
-                                                                </Button>
-                                                            ) : (
+                                                        {scheme.applicationLink && (
+                                                            <div className="mt-2">
                                                                 <Button 
-                                                                    variant="success" 
-                                                                    className="w-100 rounded-pill fw-bold"
-                                                                    style={{ background: 'linear-gradient(90deg, #00e676, #00b259)', border: 'none' }}
-                                                                    onClick={() => handleOpenRegisterModal(scheme)}
-                                                                >
-                                                                    <i className="bi bi-pencil-square me-1"></i> Register for Scheme
-                                                                </Button>
-                                                            )}
-                                                            {scheme.applicationLink && (
-                                                                <Button 
-                                                                    variant="outline-secondary" 
-                                                                    className="rounded-circle p-2 d-flex align-items-center justify-content-center"
+                                                                    variant="outline-success" 
+                                                                    className="w-100 rounded-pill fw-bold d-flex align-items-center justify-content-center gap-2"
                                                                     href={scheme.applicationLink} 
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    title="Official Govt Portal"
                                                                 >
-                                                                    <i className="bi bi-box-arrow-up-right"></i>
+                                                                    <i className="bi bi-box-arrow-up-right"></i> Official Portal
                                                                 </Button>
-                                                            )}
-                                                        </div>
+                                                            </div>
+                                                        )}
                                                     </Card.Body>
                                                 </Card>
                                             </Col>
