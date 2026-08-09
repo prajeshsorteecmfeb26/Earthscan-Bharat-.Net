@@ -209,6 +209,132 @@ namespace EarthScan.Backend.Controllers
 
             return Ok(new { message = "Comment added successfully", comment });
         }
+
+        // PUT: api/forum/comments/5
+        [HttpPut("comments/{commentId}")]
+        public async Task<IActionResult> UpdateComment(int commentId, [FromBody] UpdateCommentRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Content))
+            {
+                return BadRequest(new { message = "Comment content cannot be empty." });
+            }
+
+            var comment = await _context.ForumComments.FindAsync(commentId);
+            if (comment == null)
+            {
+                return NotFound(new { message = "Comment not found" });
+            }
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                           ?? User.FindFirstValue("sub") 
+                           ?? User.FindFirstValue("nameid");
+
+            User? currentUser = null;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId))
+            {
+                currentUser = await _context.Users.FindAsync(userId);
+            }
+
+            if (currentUser == null)
+            {
+                var emailClaim = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+                if (!string.IsNullOrEmpty(emailClaim))
+                {
+                    currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == emailClaim);
+                }
+            }
+
+            var userName = currentUser?.Name 
+                        ?? User.FindFirstValue(ClaimTypes.Name) 
+                        ?? User.FindFirstValue("unique_name") 
+                        ?? User.FindFirstValue("name") 
+                        ?? User.Identity?.Name;
+
+            var userRole = currentUser?.Role 
+                        ?? User.FindFirstValue(ClaimTypes.Role) 
+                        ?? User.FindFirstValue("role") 
+                        ?? User.Claims.FirstOrDefault(c => c.Type.EndsWith("role", StringComparison.OrdinalIgnoreCase))?.Value
+                        ?? "Farmer";
+
+            bool isExpertOrAdmin = string.Equals(userRole, "Agriculture Expert", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase)
+                                || userRole.ToLower().Contains("expert")
+                                || User.IsInRole("Agriculture Expert")
+                                || User.IsInRole("Admin");
+
+            bool isAuthor = !string.IsNullOrEmpty(userName) && string.Equals(comment.AuthorName, userName, StringComparison.OrdinalIgnoreCase);
+
+            // Agriculture Expert, Admin, Comment Author, or Authenticated user can edit comment
+            if (!isExpertOrAdmin && !isAuthor && !(User.Identity?.IsAuthenticated == true))
+            {
+                return StatusCode(403, new { message = "You do not have permission to edit this comment." });
+            }
+
+            comment.Content = request.Content;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Comment updated successfully", comment });
+        }
+
+        // DELETE: api/forum/comments/5
+        [HttpDelete("comments/{commentId}")]
+        public async Task<IActionResult> DeleteComment(int commentId)
+        {
+            var comment = await _context.ForumComments.FindAsync(commentId);
+            if (comment == null)
+            {
+                return NotFound(new { message = "Comment not found" });
+            }
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                           ?? User.FindFirstValue("sub") 
+                           ?? User.FindFirstValue("nameid");
+
+            User? currentUser = null;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId))
+            {
+                currentUser = await _context.Users.FindAsync(userId);
+            }
+
+            if (currentUser == null)
+            {
+                var emailClaim = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+                if (!string.IsNullOrEmpty(emailClaim))
+                {
+                    currentUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == emailClaim);
+                }
+            }
+
+            var userName = currentUser?.Name 
+                        ?? User.FindFirstValue(ClaimTypes.Name) 
+                        ?? User.FindFirstValue("unique_name") 
+                        ?? User.FindFirstValue("name") 
+                        ?? User.Identity?.Name;
+
+            var userRole = currentUser?.Role 
+                        ?? User.FindFirstValue(ClaimTypes.Role) 
+                        ?? User.FindFirstValue("role") 
+                        ?? User.Claims.FirstOrDefault(c => c.Type.EndsWith("role", StringComparison.OrdinalIgnoreCase))?.Value
+                        ?? "Farmer";
+
+            bool isExpertOrAdmin = string.Equals(userRole, "Agriculture Expert", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase)
+                                || userRole.ToLower().Contains("expert")
+                                || User.IsInRole("Agriculture Expert")
+                                || User.IsInRole("Admin");
+
+            bool isAuthor = !string.IsNullOrEmpty(userName) && string.Equals(comment.AuthorName, userName, StringComparison.OrdinalIgnoreCase);
+
+            if (!isExpertOrAdmin && !isAuthor)
+            {
+                return StatusCode(403, new { message = "Only Agriculture Experts or comment authors can delete comments." });
+            }
+
+            _context.ForumComments.Remove(comment);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Comment deleted successfully" });
+        }
     }
 
     public class CreatePostRequest
@@ -219,6 +345,11 @@ namespace EarthScan.Backend.Controllers
     }
 
     public class CreateCommentRequest
+    {
+        public string Content { get; set; } = string.Empty;
+    }
+
+    public class UpdateCommentRequest
     {
         public string Content { get; set; } = string.Empty;
     }

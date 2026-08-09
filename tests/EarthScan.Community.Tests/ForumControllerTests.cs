@@ -157,5 +157,38 @@ namespace EarthScan.CommunityService.Tests
             var forbidden = Assert.IsType<ObjectResult>(result);
             Assert.Equal(403, forbidden.StatusCode);
         }
+
+        [Fact]
+        public async Task UpdateComment_UpdatesCommentContent_WhenAuthorized()
+        {
+            using var context = TestSupport.CreateContext();
+            var comment = new ForumComment { ForumPostId = 1, Content = "Original", AuthorName = "Farmer User", AuthorRole = "Farmer" };
+            context.ForumComments.Add(comment);
+            await context.SaveChangesAsync();
+
+            var controller = BuildController(context, role: "Farmer", name: "Farmer User");
+
+            var result = await controller.UpdateComment(comment.Id, new UpdateCommentRequest { Content = "Updated content" });
+
+            Assert.IsType<OkObjectResult>(result);
+            var updated = context.ForumComments.Single();
+            Assert.Equal("Updated content", updated.Content);
+        }
+
+        [Fact]
+        public async Task DeleteComment_RemovesComment_WhenAuthorized()
+        {
+            using var context = TestSupport.CreateContext();
+            var comment = new ForumComment { ForumPostId = 1, Content = "To delete", AuthorName = "Farmer User", AuthorRole = "Farmer" };
+            context.ForumComments.Add(comment);
+            await context.SaveChangesAsync();
+
+            var controller = BuildController(context, role: "Agriculture Expert");
+
+            var result = await controller.DeleteComment(comment.Id);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.Empty(context.ForumComments);
+        }
     }
 }

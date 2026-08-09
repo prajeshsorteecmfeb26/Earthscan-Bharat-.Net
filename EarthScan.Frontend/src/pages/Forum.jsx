@@ -21,6 +21,9 @@ export default function Forum() {
     const [commentContent, setCommentContent] = useState('');
     const [activeCommentPostId, setActiveCommentPostId] = useState(null);
     const [submittingComment, setSubmittingComment] = useState(false);
+    const [editingCommentId, setEditingCommentId] = useState(null);
+    const [editingCommentText, setEditingCommentText] = useState('');
+    const [savingEdit, setSavingEdit] = useState(false);
     const { t } = useTranslation();
 
     useEffect(() => {
@@ -114,6 +117,68 @@ export default function Forum() {
             alert(error.response?.data?.message || error.message || 'Failed to add comment');
         } finally {
             setSubmittingComment(false);
+        }
+    };
+
+    const handleStartEditComment = (comment) => {
+        setEditingCommentId(comment.id);
+        setEditingCommentText(comment.content || '');
+    };
+
+    const handleSaveEditComment = async (postId, commentId) => {
+        if (!editingCommentText.trim()) return;
+        setSavingEdit(true);
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(`${API_BASE_URL}/api/forum/comments/${commentId}`, {
+                content: editingCommentText
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            setPosts(posts.map(p => {
+                if (p.id === postId) {
+                    return {
+                        ...p,
+                        comments: p.comments.map(c => c.id === commentId ? { ...c, content: editingCommentText } : c)
+                    };
+                }
+                return p;
+            }));
+            setEditingCommentId(null);
+            setEditingCommentText('');
+        } catch (error) {
+            console.error('Error updating comment:', error);
+            alert(error.response?.data?.message || 'Failed to update comment');
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const handleDeleteComment = async (postId, commentId) => {
+        if (!window.confirm('Are you sure you want to delete this comment?')) return;
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(`${API_BASE_URL}/api/forum/comments/${commentId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            setPosts(posts.map(p => {
+                if (p.id === postId) {
+                    return {
+                        ...p,
+                        comments: p.comments.filter(c => c.id !== commentId)
+                    };
+                }
+                return p;
+            }));
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+            alert(error.response?.data?.message || 'Failed to delete comment');
         }
     };
 
@@ -224,17 +289,66 @@ export default function Forum() {
                                             {post.comments?.length || 0} Comments
                                         </h6>
                                         
-                                        {post.comments?.map(comment => (
-                                            <div key={comment.id} className="mb-3 p-3 rounded" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                                <div className="d-flex justify-content-between mb-1">
-                                                    <span className="fw-bold small">
-                                                        {comment.authorName} <Badge bg={getRoleBadgeColor(comment.authorRole)} className="ms-1" style={{ fontSize: '0.6rem' }}>{comment.authorRole}</Badge>
-                                                    </span>
-                                                    <span className="text-secondary small" style={{ fontSize: '0.75rem' }}>{formatDate(comment.createdAt)}</span>
+                                        {post.comments?.map(comment => {
+                                            const userRoleStr = (user?.role || user?.Role || '').toLowerCase();
+                                            const isAgriExpertOrAdmin = userRoleStr.includes('expert') || userRoleStr === 'admin';
+                                            const isCommentAuthor = user && (comment.authorName === (user.name || user.Name || user.username || user.email));
+                                            const canEditComment = isAgriExpertOrAdmin || isCommentAuthor || !!user;
+                                            const canDeleteComment = isAgriExpertOrAdmin || isCommentAuthor;
+
+                                            return (
+                                                <div key={comment.id} className="mb-3 p-3 rounded position-relative" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                                        <span className="fw-bold small">
+                                                            {comment.authorName} <Badge bg={getRoleBadgeColor(comment.authorRole)} className="ms-1" style={{ fontSize: '0.6rem' }}>{comment.authorRole}</Badge>
+                                                        </span>
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            <span className="text-secondary small" style={{ fontSize: '0.75rem' }}>{formatDate(comment.createdAt)}</span>
+                                                            {canEditComment && editingCommentId !== comment.id && (
+                                                                <Button 
+                                                                    variant="link" 
+                                                                    className="p-0 text-secondary hover-white text-decoration-none" 
+                                                                    title="Edit Comment"
+                                                                    onClick={() => handleStartEditComment(comment)}
+                                                                >
+                                                                    <i className="bi bi-pencil-square" style={{ fontSize: '0.85rem' }}></i>
+                                                                </Button>
+                                                            )}
+                                                            {canDeleteComment && (
+                                                                <Button 
+                                                                    variant="link" 
+                                                                    className="p-0 text-danger opacity-75 hover-opacity-100 text-decoration-none" 
+                                                                    title="Delete Comment"
+                                                                    onClick={() => handleDeleteComment(post.id, comment.id)}
+                                                                >
+                                                                    <i className="bi bi-trash-fill" style={{ fontSize: '0.85rem' }}></i>
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {editingCommentId === comment.id ? (
+                                                        <div className="mt-2">
+                                                            <Form.Control
+                                                                as="textarea"
+                                                                rows={2}
+                                                                value={editingCommentText}
+                                                                onChange={(e) => setEditingCommentText(e.target.value)}
+                                                                className="bg-transparent text-white border-secondary shadow-none mb-2"
+                                                            />
+                                                            <div className="d-flex justify-content-end gap-2">
+                                                                <Button variant="outline-secondary" size="sm" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                                                                <Button variant="success" size="sm" onClick={() => handleSaveEditComment(post.id, comment.id)} disabled={savingEdit || !editingCommentText.trim()}>
+                                                                    {savingEdit ? 'Saving...' : 'Save'}
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="mb-0 small text-light">{comment.content}</p>
+                                                    )}
                                                 </div>
-                                                <p className="mb-0 small text-light">{comment.content}</p>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
 
                                         {( (user?.role || user?.Role || '').toLowerCase().includes('expert') || (user?.role || user?.Role || '').toLowerCase() === 'admin' ) ? (
                                             activeCommentPostId === post.id ? (
