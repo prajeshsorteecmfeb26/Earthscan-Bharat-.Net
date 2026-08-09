@@ -177,40 +177,15 @@ export default function BorewellPlanner() {
     const [waterPoints, setWaterPoints] = useState([]);
     const [fetchingWaterPoints, setFetchingWaterPoints] = useState(false);
 
-    // Initial mock data state
+    // Initial state (empty by default)
     const [results, setResults] = useState(null);
     const [mapCoords, setMapCoords] = useState(null); // { lat, lng } for Leaflet map
     const [mapLabel, setMapLabel] = useState('');
 
-    // Load state from session storage on mount
+    // Clear session storage on mount so fields remain empty by default
     useEffect(() => {
-        const saved = sessionStorage.getItem('borewellPlannerState');
-        if (saved) {
-            try {
-                const state = JSON.parse(saved);
-                if (state.pin) setPin(state.pin);
-                if (state.villages) setVillages(state.villages);
-                if (state.selectedVillage) setSelectedVillage(state.selectedVillage);
-                if (state.subArea) setSubArea(state.subArea);
-                if (state.district) setDistrict(state.district);
-                if (state.stateName) setStateName(state.stateName);
-                if (state.landSize) setLandSize(state.landSize);
-                if (state.waterReq) setWaterReq(state.waterReq);
-                if (state.results) setResults(state.results);
-                if (state.gwStats) setGwStats(state.gwStats);
-                if (state.waterPoints) setWaterPoints(state.waterPoints);
-            } catch (e) {
-                console.error("Failed to parse session storage", e);
-            }
-        }
+        sessionStorage.removeItem('borewellPlannerState');
     }, []);
-
-    // Save state to session storage whenever it changes
-    useEffect(() => {
-        sessionStorage.setItem('borewellPlannerState', JSON.stringify({
-            pin, villages, selectedVillage, subArea, district, stateName, landSize, waterReq, results, gwStats, waterPoints
-        }));
-    }, [pin, villages, selectedVillage, subArea, district, stateName, landSize, waterReq, results, gwStats, waterPoints]);
 
     // Handle pin code change lookup
     useEffect(() => {
@@ -235,9 +210,7 @@ export default function BorewellPlanner() {
                 const postOffices = data[0].PostOffice;
                 const villageList = postOffices.map(po => po.Name).sort();
                 setVillages(villageList);
-                if (villageList.length > 0) {
-                    setSelectedVillage(villageList[0]);
-                }
+                setSelectedVillage(''); // Empty by default for user selection
 
                 const sample = postOffices[0];
                 setDistrict(sample.District);
@@ -556,6 +529,7 @@ export default function BorewellPlanner() {
                                                 onChange={e => setSelectedVillage(e.target.value)}
                                                 className="bg-transparent text-white border-secondary shadow-none"
                                             >
+                                                <option value="" className="bg-dark">-- Select Village / Area --</option>
                                                 {villages.map(v => (
                                                     <option key={v} value={v} className="bg-dark">{v}</option>
                                                 ))}
@@ -595,11 +569,11 @@ export default function BorewellPlanner() {
 
                                     <Form.Group className="mb-3">
                                         <Form.Label className="text-secondary small">{t('borewell.land_size')}</Form.Label>
-                                        <Form.Control type="number" value={landSize} onChange={e => setLandSize(Number(e.target.value))} placeholder="5" className="bg-transparent text-white border-secondary shadow-none" />
+                                        <Form.Control type="number" value={landSize} onChange={e => setLandSize(e.target.value)} placeholder="e.g. 5" className="bg-transparent text-white border-secondary shadow-none" />
                                     </Form.Group>
                                     <Form.Group className="mb-4">
                                         <Form.Label className="text-secondary small">{t('borewell.water_req')}</Form.Label>
-                                        <Form.Control type="number" value={waterReq} onChange={e => setWaterReq(Number(e.target.value))} placeholder="5130" className="bg-transparent text-white border-secondary shadow-none" />
+                                        <Form.Control type="number" value={waterReq} onChange={e => setWaterReq(e.target.value)} placeholder="e.g. 5000" className="bg-transparent text-white border-secondary shadow-none" />
                                     </Form.Group>
                                     <Button
                                         variant="primary"

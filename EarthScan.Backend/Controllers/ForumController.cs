@@ -325,9 +325,15 @@ namespace EarthScan.Backend.Controllers
 
             bool isAuthor = !string.IsNullOrEmpty(userName) && string.Equals(comment.AuthorName, userName, StringComparison.OrdinalIgnoreCase);
 
-            if (!isExpertOrAdmin && !isAuthor)
+            bool isAllowed = isExpertOrAdmin 
+                          || isAuthor 
+                          || string.Equals(userRole, "Farmer", StringComparison.OrdinalIgnoreCase) 
+                          || string.Equals(userRole, "Land Buyer", StringComparison.OrdinalIgnoreCase) 
+                          || (User.Identity?.IsAuthenticated == true);
+
+            if (!isAllowed)
             {
-                return StatusCode(403, new { message = "Only Agriculture Experts or comment authors can delete comments." });
+                return StatusCode(403, new { message = "You do not have permission to delete this comment." });
             }
 
             _context.ForumComments.Remove(comment);

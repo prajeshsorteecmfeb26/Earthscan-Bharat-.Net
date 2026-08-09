@@ -292,9 +292,10 @@ export default function Forum() {
                                         {post.comments?.map(comment => {
                                             const userRoleStr = (user?.role || user?.Role || '').toLowerCase();
                                             const isAgriExpertOrAdmin = userRoleStr.includes('expert') || userRoleStr === 'admin';
+                                            const isFarmerOrLandBuyer = userRoleStr.includes('farmer') || userRoleStr.includes('buyer') || userRoleStr.includes('land');
                                             const isCommentAuthor = user && (comment.authorName === (user.name || user.Name || user.username || user.email));
-                                            const canEditComment = isAgriExpertOrAdmin || isCommentAuthor || !!user;
-                                            const canDeleteComment = isAgriExpertOrAdmin || isCommentAuthor;
+                                            const canEditComment = isAgriExpertOrAdmin || isFarmerOrLandBuyer || isCommentAuthor || !!user;
+                                            const canDeleteComment = isAgriExpertOrAdmin || isFarmerOrLandBuyer || isCommentAuthor || !!user;
 
                                             return (
                                                 <div key={comment.id} className="mb-3 p-3 rounded position-relative" style={{ background: 'rgba(255,255,255,0.05)' }}>
