@@ -387,8 +387,9 @@ export default function Forum() {
                                     </div>
                                 </Card.Body>
                             </Card>
-                        ))
-                    )}
+                        );
+                    })
+                )}
                 </Col>
 
                 <Col lg={4}>
