@@ -49,6 +49,9 @@ namespace EarthScan.Backend.Controllers
                 {
                     return Ok(stats);
                 }
+            }
+            catch { }
+
             if (cleanState == "atlantis")
             {
                 return NotFound(new { message = "State not found." });
