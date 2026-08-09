@@ -35,20 +35,20 @@
     ============================================================================
   -->
   <ItemGroup>
-    <Compile Include="..\..\EarthScan.Backend\Models\*.cs" LinkBase="Shared\Models" />
-    <Compile Include="..\..\EarthScan.Backend\DTOs\*.cs" LinkBase="Shared\DTOs" />
-    <Compile Include="..\..\EarthScan.Backend\Data\EarthScanDbContext.cs" LinkBase="Shared\Data" />
-    <Compile Include="..\..\EarthScan.Backend\Migrations\*.cs" LinkBase="Shared\Migrations" />
+    <Compile Include="../../EarthScan.Backend/Models/*.cs" LinkBase="Shared/Models" />
+    <Compile Include="../../EarthScan.Backend/DTOs/*.cs" LinkBase="Shared/DTOs" />
+    <Compile Include="../../EarthScan.Backend/Data/EarthScanDbContext.cs" LinkBase="Shared/Data" />
+    <Compile Include="../../EarthScan.Backend/Migrations/*.cs" LinkBase="Shared/Migrations" />
   </ItemGroup>
 
   <!-- Only the controllers that belong to this bounded context. -->
   <ItemGroup>
-    <Compile Include="..\..\EarthScan.Backend\Controllers\GroundwaterController.cs" LinkBase="Shared\Controllers" />
+    <Compile Include="../../EarthScan.Backend/Controllers/GroundwaterController.cs" LinkBase="Shared/Controllers" />
   </ItemGroup>
 
   <!-- CGWB dataset read by GroundwaterController.FindExcelPath() -->
   <ItemGroup>
-    <Content Include="..\..\data\India_Groundwater_Analysis_2024.xlsx" Link="India_Groundwater_Analysis_2024.xlsx">
+    <Content Include="../../data/India_Groundwater_Analysis_2024.xlsx" Link="India_Groundwater_Analysis_2024.xlsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
