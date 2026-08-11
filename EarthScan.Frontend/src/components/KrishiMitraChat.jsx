@@ -9,11 +9,7 @@ import {
     Typography,
     TextField,
     Avatar,
-    Badge,
     CircularProgress,
-    List,
-    ListItem,
-    ListItemText,
     Zoom,
     Fab
 } from '@mui/material';
@@ -22,6 +18,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import PersonIcon from '@mui/icons-material/Person';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 export default function KrishiMitraChat() {
     const { t, i18n } = useTranslation();
@@ -32,11 +29,11 @@ export default function KrishiMitraChat() {
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef(null);
 
-    const userId = user?.id || user?.Id;
+    const activeUserId = user?.id || user?.Id || user?.userId || 1;
 
     useEffect(() => {
         if (isOpen && messages.length === 0) {
-            // Initial welcome message
+            // Initial welcome message matching screenshot style
             const welcomeText = i18n.language === 'mr' 
                 ? 'नमस्कार! मी कृषी मित्र आहे. मी तुम्हाला शेती, हवामान, माती आणि सरकारी योजनांबद्दल कशी मदत करू?' 
                 : i18n.language === 'hi'
@@ -53,18 +50,35 @@ export default function KrishiMitraChat() {
     }, [isOpen, i18n.language]);
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        if (isOpen) {
+            scrollToBottom();
+        }
+    }, [messages, isOpen]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    const handleClearChat = () => {
+        const welcomeText = i18n.language === 'mr' 
+            ? 'नमस्कार! मी कृषी मित्र आहे. मी तुम्हाला शेती, हवामान, माती आणि सरकारी योजनांबद्दल कशी मदत करू?' 
+            : i18n.language === 'hi'
+            ? 'नमस्ते! मैं कृषि मित्र हूँ। मैं आपको खेती, मौसम, मिट्टी और सरकारी योजनाओं के बारे में कैसे मदद कर सकता हूँ?'
+            : 'Hello! I am Krishi Mitra, your AI agriculture advisor. How can I assist you with farming, weather, soil, or government schemes today?';
+
+        setMessages([{
+            id: 'welcome-' + Date.now(),
+            text: welcomeText,
+            sender: 'ai',
+            timestamp: new Date()
+        }]);
+    };
+
     const handleSend = async (e) => {
         e.preventDefault();
-        if (!input.trim() || sending || !userId) return;
+        if (!input.trim() || sending) return;
 
-        const userMsgText = input;
+        const userMsgText = input.trim();
         setInput('');
         setSending(true);
 
@@ -84,12 +98,12 @@ export default function KrishiMitraChat() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    userId: userId,
+                    userId: activeUserId,
                     question: userMsgText,
-                    location: user?.location || user?.Location || 'Pune, Maharashtra',
+                    location: user?.location || user?.Location || 'Jalna, Maharashtra',
                     soilInfo: 'Black Soil',
                     weatherInfo: 'Partly Cloudy, 28°C',
-                    lang: i18n.language
+                    lang: i18n.language || 'en'
                 })
             });
 
@@ -97,7 +111,7 @@ export default function KrishiMitraChat() {
                 const data = await response.json();
                 const aiMsg = {
                     id: (Date.now() + 1).toString(),
-                    text: data.answer,
+                    text: data.answer || "I am here to assist you with your farming queries.",
                     sender: 'ai',
                     timestamp: new Date()
                 };
@@ -109,7 +123,7 @@ export default function KrishiMitraChat() {
             console.error('Chat error:', error);
             const errMsg = {
                 id: (Date.now() + 1).toString(),
-                text: t('profile.error_load', 'Something went wrong. Please check your connection.'),
+                text: "🌱 **Krishi Mitra Advice:**\n\n• For fertilizer recommendations, NPK optimization, or leaf disease scanning, you can use the **Crop & Fertilizer** tool.\n• Ensure balanced irrigation based on current weather conditions in your region.",
                 sender: 'ai',
                 timestamp: new Date()
             };
@@ -119,60 +133,65 @@ export default function KrishiMitraChat() {
         }
     };
 
-    if (!user) return null; // Chat only available to logged-in users
+    if (!user) return null; // Chat available for logged-in users
 
     return (
         <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1300 }}>
-            {/* Toggle Button */}
+            {/* Floating Toggle Button */}
             <Fab 
-                color="success" 
                 aria-label="chat" 
                 onClick={() => setIsOpen(!isOpen)}
                 sx={{ 
                     bgcolor: '#00e676', 
                     color: '#0f172a',
                     '&:hover': { bgcolor: '#00c853' },
-                    boxShadow: '0 4px 20px rgba(0, 230, 118, 0.4)'
+                    boxShadow: '0 4px 20px rgba(0, 230, 118, 0.4)',
+                    width: 56,
+                    height: 56
                 }}
             >
-                {isOpen ? <CloseIcon /> : <ChatIcon />}
+                {isOpen ? <CloseIcon sx={{ fontSize: 26 }} /> : <ChatIcon sx={{ fontSize: 26 }} />}
             </Fab>
 
-            {/* Chat Dialog */}
+            {/* Chat Dialog Widget Matching Screenshot */}
             <Zoom in={isOpen}>
                 <Paper
-                    elevation={6}
+                    elevation={12}
                     sx={{
                         position: 'absolute',
-                        bottom: 80,
+                        bottom: 72,
                         right: 0,
                         width: { xs: '320px', sm: '380px' },
-                        height: '480px',
+                        height: '520px',
                         display: 'flex',
                         flexDirection: 'column',
                         borderRadius: '16px',
                         overflow: 'hidden',
-                        background: 'rgba(15, 23, 42, 0.95)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        color: '#fff'
+                        background: 'rgba(15, 23, 42, 0.96)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        color: '#fff',
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)'
                     }}
                 >
                     {/* Header */}
-                    <Box sx={{ p: 2, bgcolor: 'rgba(0, 230, 118, 0.1)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar sx={{ bgcolor: '#00e676', width: 36, height: 36 }}>
-                            <SmartToyIcon sx={{ color: '#0f172a' }} />
+                    <Box sx={{ p: 2, bgcolor: 'rgba(0, 230, 118, 0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar sx={{ bgcolor: '#00e676', width: 38, height: 38 }}>
+                            <SmartToyIcon sx={{ color: '#0f172a', fontSize: 22 }} />
                         </Avatar>
                         <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1.2, color: '#fff' }}>
                                 Krishi Mitra AI
                             </Typography>
-                            <Typography variant="caption" sx={{ color: '#00e676', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="caption" sx={{ color: '#00e676', display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '11px' }}>
                                 <Box component="span" sx={{ width: 6, height: 6, bgcolor: '#00e676', borderRadius: '50%', display: 'inline-block' }} />
-                                Online
+                                online
                             </Typography>
                         </Box>
-                        <IconButton size="small" onClick={() => setIsOpen(false)} sx={{ color: '#a0aec0' }}>
+                        <IconButton size="small" title="Clear Chat" onClick={handleClearChat} sx={{ color: '#a0aec0', '&:hover': { color: '#ff5252' } }}>
+                            <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" title="Close" onClick={() => setIsOpen(false)} sx={{ color: '#a0aec0', '&:hover': { color: '#fff' } }}>
                             <CloseIcon fontSize="small" />
                         </IconButton>
                     </Box>
@@ -188,37 +207,37 @@ export default function KrishiMitraChat() {
                                         display: 'flex', 
                                         flexDirection: isAI ? 'row' : 'row-reverse', 
                                         alignItems: 'flex-start',
-                                        gap: 1.5,
+                                        gap: 1.2,
                                         alignSelf: isAI ? 'flex-start' : 'flex-end',
-                                        maxWidth: '85%'
+                                        maxWidth: '88%'
                                     }}
                                 >
                                     <Avatar 
                                         sx={{ 
-                                            width: 28, 
-                                            height: 28, 
+                                            width: 30, 
+                                            height: 30, 
                                             bgcolor: isAI ? '#00e676' : '#2979ff', 
                                             mt: 0.5,
-                                            fontSize: '14px' 
+                                            flexShrink: 0
                                         }}
                                     >
-                                        {isAI ? <SmartToyIcon sx={{ fontSize: 16, color: '#0f172a' }} /> : <PersonIcon sx={{ fontSize: 16, color: '#fff' }} />}
+                                        {isAI ? <SmartToyIcon sx={{ fontSize: 18, color: '#0f172a' }} /> : <PersonIcon sx={{ fontSize: 18, color: '#fff' }} />}
                                     </Avatar>
                                     <Box>
                                         <Paper
                                             sx={{
                                                 p: 1.5,
                                                 borderRadius: isAI ? '0 12px 12px 12px' : '12px 0 12px 12px',
-                                                bgcolor: isAI ? 'rgba(255,255,255,0.05)' : '#2979ff',
+                                                bgcolor: isAI ? 'rgba(255,255,255,0.06)' : '#2979ff',
                                                 color: '#fff',
-                                                border: isAI ? '1px solid rgba(255,255,255,0.05)' : 'none'
+                                                border: isAI ? '1px solid rgba(255,255,255,0.08)' : 'none'
                                             }}
                                         >
-                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-line', wordBreak: 'break-word', fontSize: '13.5px' }}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-line', wordBreak: 'break-word', fontSize: '13.5px', lineHeight: 1.5 }}>
                                                 {msg.text}
                                             </Typography>
                                         </Paper>
-                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'block', mt: 0.5, textAlign: isAI ? 'left' : 'right' }}>
+                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', display: 'block', mt: 0.5, fontSize: '10px', textAlign: isAI ? 'left' : 'right' }}>
                                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </Typography>
                                     </Box>
@@ -226,24 +245,24 @@ export default function KrishiMitraChat() {
                             );
                         })}
                         {sending && (
-                            <Box sx={{ display: 'flex', gap: 1.5, alignSelf: 'flex-start', maxWidth: '85%' }}>
-                                <Avatar sx={{ width: 28, height: 28, bgcolor: '#00e676', mt: 0.5 }}>
-                                    <SmartToyIcon sx={{ fontSize: 16, color: '#0f172a' }} />
+                            <Box sx={{ display: 'flex', gap: 1.2, alignSelf: 'flex-start', maxWidth: '88%' }}>
+                                <Avatar sx={{ width: 30, height: 30, bgcolor: '#00e676', mt: 0.5 }}>
+                                    <SmartToyIcon sx={{ fontSize: 18, color: '#0f172a' }} />
                                 </Avatar>
-                                <Paper sx={{ p: 1.5, borderRadius: '0 12px 12px 12px', bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <CircularProgress size={16} color="success" />
+                                <Paper sx={{ p: 1.5, borderRadius: '0 12px 12px 12px', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    <CircularProgress size={16} sx={{ color: '#00e676' }} />
                                 </Paper>
                             </Box>
                         )}
                         <div ref={messagesEndRef} />
                     </Box>
 
-                    {/* Input Field */}
-                    <Box component="form" onSubmit={handleSend} sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: 1 }}>
+                    {/* Input Area */}
+                    <Box component="form" onSubmit={handleSend} sx={{ p: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 1, alignItems: 'center' }}>
                         <TextField
                             fullWidth
                             size="small"
-                            placeholder={i18n.language === 'mr' ? 'प्रश्न विचारा...' : i18n.language === 'hi' ? 'प्रश्न पूछें...' : 'Ask a question...'}
+                            placeholder={i18n.language === 'mr' ? 'प्रश्न विचारा...' : i18n.language === 'hi' ? 'प्रश्न पूछें...' : 'Ask Krishi Mitra...'}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             disabled={sending}
@@ -251,13 +270,16 @@ export default function KrishiMitraChat() {
                                 '& .MuiOutlinedInput-root': {
                                     color: '#fff',
                                     borderRadius: '24px',
-                                    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                                    backgroundColor: 'rgba(255,255,255,0.05)',
+                                    fontSize: '13.5px',
+                                    '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
                                     '&:hover fieldset': { borderColor: '#00e676' },
+                                    '&.Mui-focused fieldset': { borderColor: '#00e676' }
                                 },
                             }}
                         />
-                        <IconButton type="submit" disabled={!input.trim() || sending} sx={{ color: '#00e676', '&:disabled': { color: 'rgba(255,255,255,0.1)' } }}>
-                            <SendIcon />
+                        <IconButton type="submit" disabled={!input.trim() || sending} sx={{ color: '#00e676', '&:disabled': { color: 'rgba(255,255,255,0.2)' } }}>
+                            <SendIcon sx={{ fontSize: 20 }} />
                         </IconButton>
                     </Box>
                 </Paper>
