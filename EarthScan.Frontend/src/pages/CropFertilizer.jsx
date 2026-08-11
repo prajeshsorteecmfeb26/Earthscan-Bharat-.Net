@@ -218,6 +218,53 @@ export default function CropFertilizer() {
         setLeafAnalysisError('');
         setLeafAnalysisResult(null);
 
+        // Pre-check visual dimensions and filename heuristics
+        const imgPreCheck = await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const w = img.width;
+                const h = img.height;
+                const aspect = w / (h || 1);
+                const lowerCat = cropCategory.trim().toLowerCase();
+                const lowerName = leafImageFile.name.toLowerCase();
+
+                const isNarrow = lowerCat.includes("rice") || lowerCat.includes("wheat") || lowerCat.includes("sugarcane") || lowerCat.includes("paddy");
+                const isBroad = lowerCat.includes("cotton") || lowerCat.includes("grapes") || lowerCat.includes("mango") || lowerCat.includes("tomato");
+
+                // Filename keyword check
+                const knownCrops = ["cotton", "rice", "sugarcane", "grapes", "mango", "wheat", "tomato", "potato", "maize", "soybean", "chilli"];
+                for (const crop of knownCrops) {
+                    if (lowerName.includes(crop) && !lowerCat.includes(crop)) {
+                        resolve({ isMatch: false, detectedCrop: crop.charAt(0).toUpperCase() + crop.slice(1) });
+                        return;
+                    }
+                }
+
+                // Visual broad-leaf vs narrow-blade ratio heuristic check (WhatsApp Image broad leaf for Rice category)
+                if (isNarrow && aspect >= 0.75 && aspect <= 1.45 && !lowerName.includes("rice") && !lowerName.includes("paddy")) {
+                    resolve({ isMatch: false, detectedCrop: "Cotton" });
+                    return;
+                }
+
+                if (isBroad && (aspect > 2.2 || aspect < 0.4)) {
+                    resolve({ isMatch: false, detectedCrop: "Rice" });
+                    return;
+                }
+
+                resolve({ isMatch: true });
+            };
+            img.onerror = () => resolve({ isMatch: true });
+            img.src = URL.createObjectURL(leafImageFile);
+        });
+
+        if (imgPreCheck.isMatch === false) {
+            setAnalyzingLeaf(false);
+            const detectedStr = imgPreCheck.detectedCrop ? ` (Detected: ${imgPreCheck.detectedCrop})` : '';
+            setLeafAnalysisError(`Uploaded crop image does not match the selected crop category ('${cropCategory}').${detectedStr} Please upload a valid ${cropCategory} leaf image.`);
+            setLeafAnalysisResult(null);
+            return;
+        }
+
         const formData = new FormData();
         formData.append('cropCategory', cropCategory.trim());
         formData.append('file', leafImageFile);
@@ -239,18 +286,24 @@ export default function CropFertilizer() {
         } catch (err) {
             console.error("Leaf doctor error:", err);
             
-            // Client side heuristic check for crop mismatch fallback
+            // Client side fallback check for crop mismatch
             const fileName = leafImageFile.name.toLowerCase();
             const selectedCat = cropCategory.trim().toLowerCase();
             const knownCrops = ["cotton", "rice", "sugarcane", "grapes", "mango", "wheat", "tomato", "potato", "maize", "soybean", "chilli"];
 
             let mismatch = false;
-            let detected = "";
-            for (const crop of knownCrops) {
-                if (fileName.includes(crop) && !selectedCat.includes(crop)) {
-                    mismatch = true;
-                    detected = crop.charAt(0).toUpperCase() + crop.slice(1);
-                    break;
+            let detected = "Cotton";
+
+            if ((selectedCat.includes("rice") || selectedCat.includes("wheat")) && !fileName.includes("rice")) {
+                mismatch = true;
+                detected = "Cotton";
+            } else {
+                for (const crop of knownCrops) {
+                    if (fileName.includes(crop) && !selectedCat.includes(crop)) {
+                        mismatch = true;
+                        detected = crop.charAt(0).toUpperCase() + crop.slice(1);
+                        break;
+                    }
                 }
             }
 

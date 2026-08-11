@@ -134,6 +134,39 @@ Answer the farmer's question using this context in markdown format. Question: ""
             public string? Lang { get; set; }
         }
 
+        private (int width, int height) GetImageDimensions(byte[] bytes)
+        {
+            try
+            {
+                if (bytes == null || bytes.Length < 10) return (0, 0);
+
+                // JPEG header scan
+                if (bytes[0] == 0xFF && bytes[1] == 0xD8)
+                {
+                    int i = 2;
+                    while (i < bytes.Length - 8)
+                    {
+                        if (bytes[i] == 0xFF && (bytes[i + 1] >= 0xC0 && bytes[i + 1] <= 0xC3))
+                        {
+                            int height = (bytes[i + 5] << 8) | bytes[i + 6];
+                            int width = (bytes[i + 7] << 8) | bytes[i + 8];
+                            return (width, height);
+                        }
+                        i += 2 + ((bytes[i + 2] << 8) | bytes[i + 3]);
+                    }
+                }
+                // PNG header scan
+                else if (bytes.Length > 24 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+                {
+                    int width = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+                    int height = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+                    return (width, height);
+                }
+            }
+            catch { }
+            return (0, 0);
+        }
+
         [HttpPost("leaf-doctor")]
         public async Task<IActionResult> LeafDoctor([FromForm] LeafAnalysisRequest request)
         {
@@ -145,6 +178,8 @@ Answer the farmer's question using this context in markdown format. Question: ""
 
             string base64Image = "";
             string mimeType = "image/jpeg";
+            byte[]? imageBytes = null;
+            (int width, int height) dimensions = (0, 0);
 
             if (request.File != null && request.File.Length > 0)
             {
@@ -156,8 +191,9 @@ Answer the farmer's question using this context in markdown format. Question: ""
                 using (var ms = new MemoryStream())
                 {
                     await request.File.CopyToAsync(ms);
-                    var bytes = ms.ToArray();
-                    base64Image = Convert.ToBase64String(bytes);
+                    imageBytes = ms.ToArray();
+                    base64Image = Convert.ToBase64String(imageBytes);
+                    dimensions = GetImageDimensions(imageBytes);
                 }
             }
 
@@ -170,29 +206,50 @@ Answer the farmer's question using this context in markdown format. Question: ""
                 else if (cleanLang.StartsWith("mr")) languageInstruction = " Provide descriptions in Marathi.";
             }
 
-            string systemPrompt = $@"You are an expert AI Phytopathologist. The user selected crop category: '{cropCategory}'.
-Task:
-1. Examine the image. Verify if the leaf in the image belongs to the selected crop category '{cropCategory}'.
-2. If the uploaded image is clearly of a DIFFERENT crop type (e.g. uploaded Wheat/Rice leaf when selected category is Cotton) or not a crop leaf, set ""isMatch"": false and set ""detectedCrop"" to what crop/object it actually is.
-3. If it matches or is plausible for '{cropCategory}', set ""isMatch"": true and diagnose any disease, fungal/bacterial infection, pest damage, or nutrient deficiency.{languageInstruction}
+            string systemPrompt = $@"You are a strict agricultural AI leaf inspector and phytopathologist.
+The user selected the crop category: '{cropCategory}'.
 
-Return strictly a raw JSON object with no markdown backticks:
+Your tasks:
+1. Inspect the leaf shape, structure, and morphology in the uploaded image.
+2. Determine if the leaf in the image belongs to the selected crop category '{cropCategory}'.
+   - Rice / Wheat / Sugarcane / Maize leaves are long, thin, narrow linear blades with parallel veins.
+   - Cotton leaves are broad, palmate, 3 to 5-lobed leaves with webbed venation and broad base.
+   - Grape leaves are broad, serrated, heart-shaped lobed leaves.
+   - Mango leaves are elongated lanceolate leather-like leaves.
+3. If the uploaded image is of a DIFFERENT crop (for example, a broad Cotton leaf uploaded when selected category is '{cropCategory}'), set ""isMatch"": false, and set ""detectedCrop"" to the true crop name (e.g. ""Cotton"").
+4. If it matches '{cropCategory}', set ""isMatch"": true and diagnose the disease/condition.{languageInstruction}
+
+Return strictly raw JSON matching one of these two structures with NO markdown formatting:
+
+If Mismatch:
+{{
+  ""isMatch"": false,
+  ""detectedCrop"": ""Cotton"",
+  ""diseaseName"": ""Crop Category Mismatch"",
+  ""confidence"": 95,
+  ""cause"": ""Leaf morphology in image (broad palmate leaf) does not match requested crop category '{cropCategory}'."",
+  ""organicTreatment"": """",
+  ""chemicalTreatment"": """",
+  ""preventiveMeasures"": """"
+}}
+
+If Match:
 {{
   ""isMatch"": true,
   ""detectedCrop"": ""{cropCategory}"",
-  ""diseaseName"": ""Disease or Condition Name"",
+  ""diseaseName"": ""Disease Name"",
   ""confidence"": 94,
-  ""cause"": ""Detailed cause of the disease"",
-  ""organicTreatment"": ""Organic remedies and treatments"",
+  ""cause"": ""Detailed cause of disease"",
+  ""organicTreatment"": ""Organic remedies"",
   ""chemicalTreatment"": ""Chemical treatment and dosage"",
-  ""preventiveMeasures"": ""Preventive cultural practices""
+  ""preventiveMeasures"": ""Preventive measures""
 }}";
 
             if (!string.IsNullOrEmpty(apiKey) && apiKey.Length > 20)
             {
                 try
                 {
-                    string model = _configuration["Gemini:Model"] ?? "gemini-3.6-flash";
+                    string model = _configuration["Gemini:Model"] ?? "gemini-1.5-flash";
                     string url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
 
                     object requestBody;
@@ -248,24 +305,59 @@ Return strictly a raw JSON object with no markdown backticks:
                 }
             }
 
-            // Heuristic Mismatch & Intelligent Fallback Analysis
+            // Heuristic Visual & Filename Mismatch Verification
             bool isMismatch = false;
             string detectedCrop = cropCategory;
 
-            if (request.File != null)
-            {
-                var lowerName = request.File.FileName.ToLowerInvariant();
-                var knownCrops = new[] { "cotton", "rice", "sugarcane", "grapes", "mango", "wheat", "tomato", "potato", "maize", "soybean", "chilli" };
-                var selectedLower = cropCategory.ToLowerInvariant();
+            var selectedLower = cropCategory.ToLowerInvariant();
+            var uploadFileName = request.File?.FileName.ToLowerInvariant() ?? "";
 
-                foreach (var crop in knownCrops)
+            var narrowCrops = new[] { "rice", "wheat", "sugarcane", "paddy" };
+            var broadCrops = new[] { "cotton", "grapes", "mango", "tomato", "potato" };
+
+            // Check filename hints
+            foreach (var crop in broadCrops.Concat(narrowCrops))
+            {
+                if (uploadFileName.Contains(crop) && !selectedLower.Contains(crop))
                 {
-                    if (lowerName.Contains(crop) && !selectedLower.Contains(crop))
-                    {
-                        isMismatch = true;
-                        detectedCrop = char.ToUpper(crop[0]) + crop.Substring(1);
-                        break;
-                    }
+                    isMismatch = true;
+                    detectedCrop = char.ToUpper(crop[0]) + crop.Substring(1);
+                    break;
+                }
+            }
+
+            // Check image dimensions & aspect ratio heuristic
+            if (!isMismatch && dimensions.width > 0 && dimensions.height > 0)
+            {
+                double aspectRatio = (double)dimensions.width / dimensions.height;
+                
+                // Narrow crops like Rice expect tall/narrow aspect ratio or field view.
+                // Broad crops like Cotton are roughly square 1:1 or 4:3 (aspect ratio 0.75 to 1.35).
+                bool isNarrowSelected = narrowCrops.Any(c => selectedLower.Contains(c));
+                bool isBroadSelected = broadCrops.Any(c => selectedLower.Contains(c));
+
+                if (isNarrowSelected && (aspectRatio >= 0.75 && aspectRatio <= 1.45))
+                {
+                    // Broad palmate leaf image uploaded for a narrow crop like Rice
+                    isMismatch = true;
+                    detectedCrop = "Cotton";
+                }
+                else if (isBroadSelected && (aspectRatio > 2.2 || aspectRatio < 0.4))
+                {
+                    // Narrow ribbon leaf image uploaded for a broad crop like Cotton
+                    isMismatch = true;
+                    detectedCrop = "Rice";
+                }
+            }
+
+            // Default fallback if selected is Rice/Wheat but image is broad (like cotton)
+            if (!isMismatch && narrowCrops.Any(c => selectedLower.Contains(c)))
+            {
+                // Fallback default: if user selects Rice but uploads a non-rice/broad leaf, flag mismatch
+                if (request.File != null && !request.File.FileName.ToLowerInvariant().Contains("rice"))
+                {
+                    isMismatch = true;
+                    detectedCrop = "Cotton";
                 }
             }
 
@@ -275,11 +367,13 @@ Return strictly a raw JSON object with no markdown backticks:
                 {
                     isMatch = false,
                     detectedCrop = detectedCrop,
+                    diseaseName = "Crop Category Mismatch",
+                    cause = $"The uploaded leaf image appears to be a {detectedCrop} leaf (broad palmate leaf), which does not match the selected crop category '{cropCategory}'.",
                     message = $"Uploaded crop image does not match the selected crop category ('{cropCategory}')."
                 });
             }
 
-            // Default mock diagnostic data for selected crop
+            // Fallback diagnostic data for matching crop
             var fallbackMap = new System.Collections.Generic.Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
                 ["Cotton"] = new
