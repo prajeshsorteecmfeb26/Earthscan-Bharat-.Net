@@ -170,10 +170,11 @@ export default function KrishiMitraChat() {
                     elevation={12}
                     sx={{
                         position: 'absolute',
-                        bottom: 72,
+                        bottom: 70,
                         right: 0,
-                        width: { xs: '320px', sm: '380px' },
-                        height: '520px',
+                        width: { xs: '310px', sm: '370px' },
+                        height: 'min(460px, calc(100vh - 115px))',
+                        maxHeight: 'calc(100vh - 115px)',
                         display: 'flex',
                         flexDirection: 'column',
                         borderRadius: '16px',
