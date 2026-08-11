@@ -22,7 +22,18 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 export default function KrishiMitraChat() {
     const { t, i18n } = useTranslation();
-    const { user } = useContext(AuthContext);
+    const { user: authUser } = useContext(AuthContext);
+
+    // Fallback to localStorage if Context is initializing
+    const user = authUser || (() => {
+        try {
+            const saved = localStorage.getItem('user');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    })();
+
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -136,7 +147,7 @@ export default function KrishiMitraChat() {
     if (!user) return null; // Chat available for logged-in users
 
     return (
-        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1300 }}>
+        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999 }}>
             {/* Floating Toggle Button */}
             <Fab 
                 aria-label="chat" 
