@@ -27,7 +27,7 @@ namespace EarthScan.AgriService.Tests
         }
 
         [Fact]
-        public async Task GetSchemes_ReturnsEmptyList_WhenNoneConfigured()
+        public async Task GetSchemes_ReturnsDefaultSchemes_WhenNoneConfigured()
         {
             using var context = TestSupport.CreateContext();
             var controller = new SchemesController(context);
@@ -35,7 +35,7 @@ namespace EarthScan.AgriService.Tests
             var result = await controller.GetSchemes();
 
             Assert.NotNull(result.Value);
-            Assert.Empty(result.Value!);
+            Assert.NotEmpty(result.Value!);
         }
     }
 }

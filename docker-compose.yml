@@ -72,7 +72,7 @@ services:
       Jwt__Issuer: "EarthScanBackend"
       Jwt__Audience: "EarthScanUsers"
       ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
-      Gemini__Model: "${GEMINI_MODEL:-gemini-3.6-flash}"
+      Gemini__Model: "${GEMINI_MODEL:-gemini-1.5-flash}"
     ports:
       - "5002:8080"
     volumes:
@@ -96,7 +96,7 @@ services:
       Jwt__Audience: "EarthScanUsers"
       ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
       ApiKeys__DataGov: "${DATAGOV_API_KEY:-}"
-      Gemini__Model: "${GEMINI_MODEL:-gemini-3.6-flash}"
+      Gemini__Model: "${GEMINI_MODEL:-gemini-1.5-flash}"
     ports:
       - "5003:8080"
     volumes:
@@ -139,7 +139,7 @@ services:
       Jwt__Issuer: "EarthScanBackend"
       Jwt__Audience: "EarthScanUsers"
       ApiKeys__Gemini: "${GEMINI_API_KEY:-}"
-      Gemini__Model: "${GEMINI_MODEL:-gemini-3.6-flash}"
+      Gemini__Model: "${GEMINI_MODEL:-gemini-1.5-flash}"
     ports:
       - "5005:8080"
     networks:

@@ -36,6 +36,7 @@ import MyQueries from './pages/MyQueries';
 import LanguageSelector from './components/LanguageSelector';
 import Profile from './pages/Profile';
 import AdminSupportQueries from './pages/AdminSupportQueries';
+import KrishiMitraChat from './components/KrishiMitraChat';
 
 const drawerWidth = 260;
 
@@ -251,6 +252,7 @@ function MainLayout({ children }) {
         }}
       >
         {children}
+        <KrishiMitraChat />
       </Box>
     </Box>
   );

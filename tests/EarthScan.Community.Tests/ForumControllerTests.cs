@@ -14,12 +14,12 @@ namespace EarthScan.CommunityService.Tests
     /// <summary>Unit tests for the community forum endpoints.</summary>
     public class ForumControllerTests
     {
-        private static ForumController BuildController(EarthScan.Backend.Data.EarthScanDbContext context)
+        private static ForumController BuildController(EarthScan.Backend.Data.EarthScanDbContext context, string role = "Farmer", string name = "Farmer User")
         {
             var identity = new ClaimsIdentity(new[]
             {
-                new Claim(ClaimTypes.Name, "Farmer User"),
-                new Claim(ClaimTypes.Role, "Farmer")
+                new Claim(ClaimTypes.Name, name),
+                new Claim(ClaimTypes.Role, role)
             }, "TestAuth");
 
             return new ForumController(context)
@@ -130,7 +130,7 @@ namespace EarthScan.CommunityService.Tests
             context.ForumPosts.Add(post);
             await context.SaveChangesAsync();
 
-            var controller = BuildController(context);
+            var controller = BuildController(context, role: "Agriculture Expert");
 
             var result = await controller.AddComment(post.Id, new CreateCommentRequest { Content = "Try drip irrigation" });
 
@@ -140,6 +140,55 @@ namespace EarthScan.CommunityService.Tests
             Assert.Equal(post.Id, comment.ForumPostId);
             Assert.Equal("Try drip irrigation", comment.Content);
             Assert.Equal("Farmer User", comment.AuthorName);
+        }
+
+        [Fact]
+        public async Task AddComment_ReturnsForbidden_WhenUserIsNotAgricultureExpert()
+        {
+            using var context = TestSupport.CreateContext();
+            var post = new ForumPost { Title = "Q", Content = "B", AuthorName = "A", AuthorRole = "Farmer", Category = "General" };
+            context.ForumPosts.Add(post);
+            await context.SaveChangesAsync();
+
+            var controller = BuildController(context, role: "Farmer");
+
+            var result = await controller.AddComment(post.Id, new CreateCommentRequest { Content = "Not allowed" });
+
+            var forbidden = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(403, forbidden.StatusCode);
+        }
+
+        [Fact]
+        public async Task UpdateComment_UpdatesCommentContent_WhenAuthorized()
+        {
+            using var context = TestSupport.CreateContext();
+            var comment = new ForumComment { ForumPostId = 1, Content = "Original", AuthorName = "Farmer User", AuthorRole = "Farmer" };
+            context.ForumComments.Add(comment);
+            await context.SaveChangesAsync();
+
+            var controller = BuildController(context, role: "Farmer", name: "Farmer User");
+
+            var result = await controller.UpdateComment(comment.Id, new UpdateCommentRequest { Content = "Updated content" });
+
+            Assert.IsType<OkObjectResult>(result);
+            var updated = context.ForumComments.Single();
+            Assert.Equal("Updated content", updated.Content);
+        }
+
+        [Fact]
+        public async Task DeleteComment_RemovesComment_WhenAuthorized()
+        {
+            using var context = TestSupport.CreateContext();
+            var comment = new ForumComment { ForumPostId = 1, Content = "To delete", AuthorName = "Farmer User", AuthorRole = "Farmer" };
+            context.ForumComments.Add(comment);
+            await context.SaveChangesAsync();
+
+            var controller = BuildController(context, role: "Agriculture Expert");
+
+            var result = await controller.DeleteComment(comment.Id);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.Empty(context.ForumComments);
         }
     }
 }
